@@ -1,0 +1,8 @@
+{
+  "name": "Academy Model: The Polyglot Guild",
+  "description": "A scalable SaaS-like platform for educators to generate AI-powered coding missions across multiple languages, track student progress, and share content globally.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

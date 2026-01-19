@@ -4,6 +4,8 @@ export enum Role {
   STUDENT = 'STUDENT'
 }
 
+export type StudentStatus = 'pending' | 'approved' | 'denied';
+
 export enum ProgrammingLanguage {
   PYTHON = 'Python',
   JAVASCRIPT = 'Javascript',
@@ -29,17 +31,17 @@ export interface ClassProfile {
   createdAt: number;
 }
 
-export interface LanguageStats {
-  language: ProgrammingLanguage;
-  xp: number;
-  missionsCompleted: number;
-}
-
 export interface StudentProfile {
+  uid: string;
   name: string;
+  email: string;
   globalXp: number;
   languageMastery: Record<string, number>; // Language -> XP
   completedSets: string[]; // QuestionSet IDs
+  status: StudentStatus;
+  classId: string;
+  masterKey: string; // The teacherId (UID) they belong to
+  unlockedSets: string[]; // IDs of Mission Packs they have unlocked with a passcode
 }
 
 export interface Question {
@@ -48,7 +50,7 @@ export interface Question {
   description: string;
   starterCode: string;
   solutionHint: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Challenging';
   points: number;
 }
 
@@ -63,16 +65,22 @@ export interface QuestionSet {
   questions: Question[];
   isPublic: boolean;
   createdAt: number;
+  // Dynamic progression gates
+  unlockEasyToMedium: number;
+  unlockMediumToHard: number;
+  unlockHardToChallenging: number;
 }
 
 export interface StudentProgress {
   id: string;
-  studentName: string;
+  studentUid: string; // Linked to StudentProfile.uid
+  studentName: string; 
   teacherId: string;
-  classId: string; // Linked class
+  classId: string; 
   questionSetId: string;
   completedQuestions: string[]; // Question IDs
   scores: Record<string, number>; // questionId -> score
+  draftCodes?: Record<string, string>; // questionId -> current work code
   lastActive: number;
   language: ProgrammingLanguage;
 }

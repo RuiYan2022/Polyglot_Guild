@@ -6,7 +6,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from '../services/firebase';
 import { doc, getDoc } from "firebase/firestore";
-import { Role, TeacherProfile } from '../types';
+import { Role, TeacherProfile, StudentProfile } from '../types';
 import { storageService } from '../services/storageService';
 import { ICONS } from '../constants';
 
@@ -91,6 +91,7 @@ export const TeacherAuth: React.FC<AuthProps> = ({ onLogin }) => {
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               value={name} onChange={e => setName(e.target.value)}
             />
+            {/* Fix: Passed a function to handle the onChange event correctly and capture the event 'e' */}
             <input 
               required
               placeholder="School/Academy Name" 
@@ -149,48 +150,63 @@ export const TeacherAuth: React.FC<AuthProps> = ({ onLogin }) => {
 };
 
 export const StudentAuth: React.FC<AuthProps> = ({ onLogin }) => {
+  const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [classCode, setClassCode] = useState('');
-  const [passcode, setPasscode] = useState('');
+  const [masterKey, setMasterKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedCode = localStorage.getItem('remembered_class_code');
-    if (savedCode) setClassCode(savedCode);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
+
     try {
-      // Find the class by the provided code
-      const targetClass = await storageService.getClassByCode(classCode.trim());
-      if (!targetClass) throw new Error("Class not found. Verify your Class Code.");
-      
-      // Get the teacher associated with this class
-      const teacherRef = doc(db, "teachers", targetClass.teacherId);
-      const teacherSnap = await getDoc(teacherRef);
-      const teacher = teacherSnap.data();
-      if (!teacher) throw new Error("Academy records missing for this class.");
+      if (isLogin) {
+        // --- STUDENT LOGIN ---
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const profile = await storageService.getStudentProfile(userCredential.user.uid);
+        
+        if (!profile) throw new Error("Student profile records not found.");
+        onLogin({ ...profile, role: Role.STUDENT });
+      } else {
+        // --- STUDENT REGISTRATION ---
+        // 1. Validate Master Key
+        const teacher = await storageService.getTeacherByCode(masterKey.trim());
+        if (!teacher) throw new Error("Invalid Master Key. Please check with your teacher.");
 
-      // Verify the mission passcode exists under this teacher
-      const set = await storageService.getQuestionSetByPortal(targetClass.teacherId, passcode.trim());
-      if (!set) throw new Error("Mission Pack not found. Verify your Mission Pass.");
+        // 2. Validate Class Code
+        const targetClass = await storageService.getClassByCode(classCode.trim());
+        if (!targetClass || targetClass.teacherId !== teacher.uid) {
+          throw new Error("Class Code not found in this Academy.");
+        }
 
-      localStorage.setItem('remembered_class_code', classCode.trim().toUpperCase());
-
-      onLogin({
-        name,
-        role: Role.STUDENT,
-        teacher: { ...teacher, uid: targetClass.teacherId },
-        classId: targetClass.id,
-        className: targetClass.name,
-        activeSet: set
-      });
+        // 3. Create Auth Account
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        
+        // 4. Create Student Profile
+        const newStudent: StudentProfile = {
+          uid: userCredential.user.uid,
+          name,
+          email: email.trim(),
+          globalXp: 0,
+          languageMastery: {},
+          completedSets: [],
+          status: 'pending',
+          classId: targetClass.id,
+          masterKey: teacher.uid,
+          unlockedSets: []
+        };
+        
+        await storageService.saveStudentProfile(newStudent);
+        onLogin({ ...newStudent, role: Role.STUDENT });
+      }
     } catch (error: any) {
-      setErrorMsg(error.message || 'Access denied.');
+      console.error("Student Auth Error:", error);
+      setErrorMsg(error.message || "Authentication failed.");
     } finally {
       setIsLoading(false);
     }
@@ -202,8 +218,12 @@ export const StudentAuth: React.FC<AuthProps> = ({ onLogin }) => {
         <div className="inline-block p-3 bg-violet-50 rounded-2xl mb-4">
           <ICONS.Terminal className="w-8 h-8 text-violet-600" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800">Student Portal</h2>
-        <p className="text-slate-500 mt-2">Enter your class code to start training.</p>
+        <h2 className="text-2xl font-bold text-slate-800">
+          {isLogin ? 'Student Login' : 'Student Registration'}
+        </h2>
+        <p className="text-slate-500 mt-2">
+          {isLogin ? 'Enter your credentials to continue training.' : 'Create an account to join an Academy.'}
+        </p>
       </div>
 
       {errorMsg && (
@@ -212,41 +232,100 @@ export const StudentAuth: React.FC<AuthProps> = ({ onLogin }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleAuth} className="space-y-4">
+        {!isLogin && (
+          <>
+            <input 
+              required
+              placeholder="Your Full Name" 
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+              value={name} onChange={e => setName(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-4">
+               <input 
+                 required
+                 placeholder="Master Key" 
+                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all uppercase"
+                 value={masterKey} onChange={e => setMasterKey(e.target.value.toUpperCase())}
+               />
+               <input 
+                 required
+                 placeholder="Class Code" 
+                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all uppercase"
+                 value={classCode} onChange={e => setClassCode(e.target.value.toUpperCase())}
+               />
+            </div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter px-1">Check with your Teacher for keys.</p>
+          </>
+        )}
+        
         <input 
           required
-          placeholder="Explorer Name" 
+          type="email"
+          placeholder="Email Address" 
           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all"
-          value={name} onChange={e => setName(e.target.value)}
+          value={email} onChange={e => setEmail(e.target.value)}
         />
-        <div className="grid grid-cols-2 gap-4">
-          <div className="relative">
-            <input 
-              required
-              placeholder="Class Code" 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all uppercase"
-              value={classCode} onChange={e => setClassCode(e.target.value.toUpperCase())}
-            />
-            <p className="absolute -bottom-5 left-1 text-[9px] text-slate-400 font-bold uppercase tracking-tighter">e.g. PY-101</p>
-          </div>
-          <div className="relative">
-            <input 
-              required
-              placeholder="Mission Pass" 
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all uppercase"
-              value={passcode} onChange={e => setPasscode(e.target.value.toUpperCase())}
-            />
-            <p className="absolute -bottom-5 left-1 text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Portal Passcode</p>
-          </div>
-        </div>
+        <input 
+          required
+          type="password"
+          placeholder="Password" 
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-500 outline-none transition-all"
+          value={password} onChange={e => setPassword(e.target.value)}
+        />
+
         <button 
           disabled={isLoading}
           type="submit"
           className="w-full mt-4 py-4 bg-violet-600 text-white rounded-xl font-bold shadow-lg shadow-violet-100 hover:bg-violet-700 transition-all active:scale-95 disabled:bg-slate-300"
         >
-          {isLoading ? 'Scanning...' : 'Enter Mission Portal'}
+          {isLoading ? 'Scanning...' : (isLogin ? 'Enter Portal' : 'Register for Academy')}
         </button>
       </form>
+
+      <div className="mt-6 text-center">
+        <button 
+          disabled={isLoading}
+          onClick={() => { setIsLogin(!isLogin); setErrorMsg(null); }}
+          className="text-sm font-medium text-slate-500 hover:text-violet-600 transition-colors"
+        >
+          {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const WaitingRoom: React.FC<{ profile: StudentProfile; onSignOut: () => void }> = ({ profile, onSignOut }) => {
+  return (
+    <div className="max-w-lg w-full mx-auto bg-white p-12 rounded-[2.5rem] shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in-95 duration-500">
+      <div className="relative mb-10 inline-block">
+        <div className="absolute inset-0 bg-violet-400 rounded-full blur-2xl opacity-20 animate-pulse"></div>
+        <div className="relative bg-violet-50 p-8 rounded-full border-2 border-violet-100">
+          <svg className="w-16 h-16 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+      </div>
+      
+      <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Entrance Requested</h2>
+      <p className="text-slate-500 text-lg leading-relaxed mb-8">
+        Welcome, <span className="text-slate-900 font-bold">{profile.name}</span>. Your request to join the Academy has been sent. Please wait for your <span className="text-violet-600 font-black">Guild Master</span> to grant clearance.
+      </p>
+
+      <div className="flex flex-col items-center gap-6 mb-12">
+        <div className="flex items-center gap-3 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
+          <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></div>
+          <span className="text-xs font-black text-amber-700 uppercase tracking-widest">Pending Verification</span>
+        </div>
+      </div>
+
+      <button 
+        onClick={onSignOut}
+        className="text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors border-b border-transparent hover:border-slate-300"
+      >
+        Cancel Request & Sign Out
+      </button>
     </div>
   );
 };

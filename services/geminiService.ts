@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { ProgrammingLanguage, Question, AIResponse } from '../types';
 
@@ -14,8 +15,8 @@ export const generateMissions = async (
     model: 'gemini-3-pro-preview',
     contents: `Generate ${count} coding missions about "${topic}" in ${language}. 
                Each mission should have a title, description, starter code, a brief solution hint, and a points value.
-               Difficulty should vary from Easy to Hard. 
-               Suggested points: Easy=100, Medium=250, Hard=500.`,
+               Difficulty must be one of: Easy, Medium, Hard, or Challenging. 
+               Suggested points: Easy=100, Medium=250, Hard=500, Challenging=1000.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {

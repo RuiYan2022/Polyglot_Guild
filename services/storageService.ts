@@ -8,10 +8,13 @@ import {
   query, 
   where, 
   limit,
-  deleteDoc
+  deleteDoc,
+  updateDoc,
+  arrayUnion,
+  orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { TeacherProfile, QuestionSet, StudentProgress, StudentProfile, ClassProfile } from '../types';
+import { TeacherProfile, QuestionSet, StudentProgress, StudentProfile, ClassProfile, StudentStatus } from '../types';
 
 class StorageService {
   private handleErr(error: any, context: string) {
@@ -81,6 +84,93 @@ class StorageService {
     }
   }
 
+  // --- Students ---
+  async getStudentProfile(uid: string): Promise<StudentProfile | undefined> {
+    try {
+      const docRef = doc(db, "students", uid);
+      const snap = await getDoc(docRef);
+      return snap.exists() ? snap.data() as StudentProfile : undefined;
+    } catch (error) {
+      this.handleErr(error, "getStudentProfile");
+    }
+  }
+
+  async saveStudentProfile(profile: StudentProfile): Promise<void> {
+    try {
+      await setDoc(doc(db, "students", profile.uid), profile);
+    } catch (error) {
+      this.handleErr(error, "saveStudentProfile");
+    }
+  }
+
+  async getPendingStudents(teacherId: string): Promise<StudentProfile[]> {
+    try {
+      const q = query(
+        collection(db, "students"), 
+        where("masterKey", "==", teacherId),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data() as StudentProfile);
+    } catch (error) {
+      this.handleErr(error, "getPendingStudents");
+      return [];
+    }
+  }
+
+  async getApprovedStudents(teacherId: string): Promise<StudentProfile[]> {
+    try {
+      const q = query(
+        collection(db, "students"), 
+        where("masterKey", "==", teacherId),
+        where("status", "==", "approved")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data() as StudentProfile);
+    } catch (error) {
+      this.handleErr(error, "getApprovedStudents");
+      return [];
+    }
+  }
+
+  async getAcademyLeaderboard(teacherId: string, max: number = 10): Promise<StudentProfile[]> {
+    try {
+      const q = query(
+        collection(db, "students"),
+        where("masterKey", "==", teacherId),
+        where("status", "==", "approved")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs
+        .map(doc => doc.data() as StudentProfile)
+        .sort((a, b) => (b.globalXp || 0) - (a.globalXp || 0))
+        .slice(0, max);
+    } catch (error) {
+      this.handleErr(error, "getAcademyLeaderboard");
+      return [];
+    }
+  }
+
+  async updateStudentStatus(uid: string, status: StudentStatus): Promise<void> {
+    try {
+      const docRef = doc(db, "students", uid);
+      await updateDoc(docRef, { status });
+    } catch (error) {
+      this.handleErr(error, "updateStudentStatus");
+    }
+  }
+
+  async unlockMissionPack(uid: string, setId: string): Promise<void> {
+    try {
+      const docRef = doc(db, "students", uid);
+      await updateDoc(docRef, {
+        unlockedSets: arrayUnion(setId)
+      });
+    } catch (error) {
+      this.handleErr(error, "unlockMissionPack");
+    }
+  }
+
   // --- Question Sets ---
   async getQuestionSets(teacherId: string): Promise<QuestionSet[]> {
     try {
@@ -141,6 +231,14 @@ class StorageService {
     }
   }
 
+  async deleteQuestionSet(setId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, "questionSets", setId));
+    } catch (error) {
+      this.handleErr(error, "deleteQuestionSet");
+    }
+  }
+
   async cloneQuestionSet(setId: string, newTeacherId: string): Promise<void> {
     try {
       const originalRef = doc(db, "questionSets", setId);
@@ -163,7 +261,7 @@ class StorageService {
     }
   }
 
-  // --- Student Progress & Global Mastery ---
+  // --- Progress ---
   async getProgress(teacherId: string): Promise<StudentProgress[]> {
     try {
       const q = query(
@@ -188,30 +286,30 @@ class StorageService {
         lastActive: Date.now()
       }, { merge: true });
       
-      await this.updateGlobalStudentStats(progress.studentName);
+      await this.updateGlobalStudentStats(progress.studentUid, progress.studentName);
     } catch (error) {
       this.handleErr(error, "saveProgress");
     }
   }
 
-  async getStudentProgress(studentName: string, teacherId: string): Promise<StudentProgress[]> {
+  async getStudentProgressByUid(studentUid: string, teacherId: string): Promise<StudentProgress[]> {
     try {
       const q = query(
         collection(db, "progress"), 
-        where("studentName", "==", studentName),
+        where("studentUid", "==", studentUid),
         where("teacherId", "==", teacherId)
       );
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => doc.data() as StudentProgress);
     } catch (error) {
-      this.handleErr(error, "getStudentProgress");
+      this.handleErr(error, "getStudentProgressByUid");
       return [];
     }
   }
 
-  private async updateGlobalStudentStats(name: string): Promise<void> {
+  private async updateGlobalStudentStats(uid: string, name: string): Promise<void> {
     try {
-      const q = query(collection(db, "progress"), where("studentName", "==", name));
+      const q = query(collection(db, "progress"), where("studentUid", "==", uid));
       const querySnapshot = await getDocs(q);
       const allProgress = querySnapshot.docs.map(doc => doc.data() as StudentProgress);
       
@@ -229,27 +327,15 @@ class StorageService {
         completedSets.push(p.questionSetId);
       });
 
-      const studentRef = doc(db, "students", name.toLowerCase());
-      const profile: StudentProfile = {
+      const studentRef = doc(db, "students", uid);
+      await setDoc(studentRef, {
         name,
         globalXp,
         languageMastery,
         completedSets: Array.from(new Set(completedSets))
-      };
-
-      await setDoc(studentRef, profile);
+      }, { merge: true });
     } catch (error) {
       this.handleErr(error, "updateGlobalStudentStats");
-    }
-  }
-
-  async getGlobalStudentProfile(name: string): Promise<StudentProfile | undefined> {
-    try {
-      const studentRef = doc(db, "students", name.toLowerCase());
-      const snap = await getDoc(studentRef);
-      return snap.exists() ? snap.data() as StudentProfile : undefined;
-    } catch (error) {
-      this.handleErr(error, "getGlobalStudentProfile");
     }
   }
 }

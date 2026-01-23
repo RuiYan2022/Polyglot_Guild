@@ -1,4 +1,4 @@
-
+// Fix: Added explicit typing for accumulator in reduce calls to ensure consistent numeric operations.
 import React, { useState, useEffect } from 'react';
 import { TeacherProfile, QuestionSet, StudentProgress, ClassProfile, StudentProfile } from '../types';
 import { storageService } from '../services/storageService';
@@ -135,7 +135,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
     : approvedStudents.filter(s => s.classId === selectedClassId);
 
   const getAnalytics = () => {
-    const totalXp = approvedStudents.reduce((acc, s) => acc + s.globalXp, 0);
+    // Explicitly type acc as number to avoid arithmetic operation errors
+    const totalXp = approvedStudents.reduce((acc: number, s) => acc + s.globalXp, 0);
     const avgXp = approvedStudents.length > 0 ? Math.floor(totalXp / approvedStudents.length) : 0;
     
     const packStats = missions.map(set => {
@@ -250,7 +251,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mission Completion</p>
                      <p className="text-4xl font-black text-green-600">
-                       {packStats.length > 0 ? Math.round(packStats.reduce((a, b) => a + b.completionRate, 0) / packStats.length) : 0}%
+                       {/* Fix: Added explicit typing for accumulator in reduce call to ensure consistent numeric operations. */}
+                       {packStats.length > 0 ? Math.round(packStats.reduce((acc: number, set) => acc + set.completionRate, 0) / packStats.length) : 0}%
                      </p>
                   </div>
                </div>
@@ -372,27 +374,30 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 border-b border-slate-100">
                       <tr>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Explorer</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[180px]">Explorer</th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Classroom</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Global XP</th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mastery</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[240px]">Mission Intelligence</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Global XP</th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {filteredApproved.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-8 py-20 text-center text-slate-400 text-sm font-medium italic">
+                          <td colSpan={6} className="px-8 py-20 text-center text-slate-400 text-sm font-medium italic">
                             No approved explorers found.
                           </td>
                         </tr>
                       ) : (
                         filteredApproved.map(student => {
                           const targetClass = classes.find(c => c.id === student.classId);
+                          const studentProgressRecords = progress.filter(p => p.studentUid === student.uid);
+
                           return (
                             <tr key={student.uid} className="hover:bg-slate-50/80 transition-colors">
                               <td className="px-8 py-6">
@@ -401,27 +406,64 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                                     {student.name.substring(0, 2).toUpperCase()}
                                   </div>
                                   <div>
-                                    <p className="font-black text-slate-800 text-sm">{student.name}</p>
+                                    <p className="font-black text-slate-800 text-sm whitespace-nowrap">{student.name}</p>
                                     <p className="text-[10px] text-slate-400 font-bold">{student.email}</p>
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-8 py-6 text-sm font-bold text-slate-600">
+                              <td className="px-8 py-6 text-sm font-bold text-slate-600 whitespace-nowrap">
                                 {targetClass?.name || 'Unknown Class'}
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex flex-wrap gap-1">
+                                  {Object.keys(student.languageMastery || {}).length > 0 ? (
+                                    Object.keys(student.languageMastery).map(lang => (
+                                      <span key={lang} className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-black uppercase rounded tracking-tighter">
+                                        {lang}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[8px] text-slate-300 uppercase font-black tracking-widest italic">No Data</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex flex-wrap gap-2">
+                                  {studentProgressRecords.length > 0 ? (
+                                    studentProgressRecords.map(p => {
+                                      const pack = missions.find(m => m.id === p.questionSetId);
+                                      // Fix: Added explicit typing for accumulator in reduce call to ensure consistent numeric operations.
+                                      const packXp = Object.values(p.scores || {}).reduce((acc: number, v: number) => acc + (v || 0), 0);
+                                      // Fix: Added explicit typing for accumulator and optional chaining for safer arithmetic operations.
+                                      const totalPossibleXp = pack?.questions?.reduce((acc: number, q) => acc + q.points, 0) || 0;
+                                      const completionPercent = totalPossibleXp > 0 ? Math.round((packXp / totalPossibleXp) * 100) : 0;
+
+                                      return (
+                                        <div key={p.id} className="group relative">
+                                          <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl cursor-default hover:bg-indigo-100 transition-colors">
+                                            <span className="text-[10px] font-black text-indigo-700 max-w-[100px] truncate">
+                                              {pack?.title || 'Unknown Pack'}
+                                            </span>
+                                            <span className="text-[10px] font-black bg-white px-1.5 py-0.5 rounded shadow-sm text-indigo-600">
+                                              {packXp} XP
+                                            </span>
+                                          </div>
+                                          {/* Tooltip on hover */}
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white px-3 py-2 rounded-lg text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-xl border border-slate-800">
+                                            {completionPercent}% Proficiency • {p.completedQuestions.length}/{pack?.questions.length || 0} Tasks
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <span className="text-[9px] font-black text-slate-300 uppercase italic">No Active Missions</span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-8 py-6">
                                 <div className="flex items-baseline gap-1">
                                   <span className="font-black text-slate-900 text-lg">{student.globalXp.toLocaleString()}</span>
                                   <span className="text-[9px] font-black text-indigo-400 uppercase">XP</span>
-                                </div>
-                              </td>
-                              <td className="px-8 py-6">
-                                <div className="flex flex-wrap gap-1">
-                                  {Object.keys(student.languageMastery || {}).map(lang => (
-                                    <span key={lang} className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-black uppercase rounded tracking-tighter">
-                                      {lang}
-                                    </span>
-                                  ))}
                                 </div>
                               </td>
                               <td className="px-8 py-6">

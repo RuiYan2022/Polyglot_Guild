@@ -1,4 +1,5 @@
 
+// Updated StudentPortal to anonymize other students in the Hall of Fame for privacy.
 import React, { useState, useEffect, useRef } from 'react';
 import { QuestionSet, StudentProgress, AIResponse, StudentProfile, ProgrammingLanguage, Question } from '../types';
 import { evaluateCode } from '../services/geminiService';
@@ -34,7 +35,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   const [globalProfile, setGlobalProfile] = useState<StudentProfile>(profile);
   const [progress, setProgress] = useState<StudentProgress | null>(null);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<any>(null);
   const difficulties: ('Easy' | 'Medium' | 'Hard' | 'Challenging')[] = ['Easy', 'Medium', 'Hard', 'Challenging'];
 
   const refreshProfile = async () => {
@@ -54,7 +55,6 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
 
   useEffect(() => { refreshProfile(); }, [globalProfile.uid]);
 
-  // Persist code changes to current progress state and auto-save
   useEffect(() => {
     if (view === 'editor' && progress && activeSet) {
       const currentQ = activeSet.questions[currentIdx];
@@ -288,6 +288,9 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
                    <div className="space-y-4">
                       {leaderboard.map((student, idx) => {
                         const isCurrent = student.uid === globalProfile.uid;
+                        // Anonymization logic: If it's not the current student, hide the name.
+                        const displayName = isCurrent ? student.name : `Anonymous Explorer #${idx + 1}`;
+                        
                         return (
                           <div key={student.uid} className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${isCurrent ? 'bg-indigo-600/10 border border-indigo-500/20' : 'bg-slate-950/50 border border-white/5'}`}>
                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
@@ -298,7 +301,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
                                {idx + 1}
                              </div>
                              <div className="flex-1">
-                                <p className={`font-black text-sm ${isCurrent ? 'text-indigo-400' : 'text-slate-200'}`}>{student.name}</p>
+                                <p className={`font-black text-sm ${isCurrent ? 'text-indigo-400' : 'text-slate-200'}`}>{displayName}</p>
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{student.globalXp.toLocaleString()} XP</p>
                              </div>
                           </div>
@@ -315,7 +318,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
 
   if (!activeSet || !progress) return null;
   const currentMission = activeSet.questions[currentIdx];
-  const setTotalXp = Object.values(progress.scores).reduce((acc, v) => acc + (v || 0), 0);
+  const setTotalXp = Object.values(progress.scores).reduce((acc: number, v: any) => acc + (v || 0), 0);
   const setCompletionPercentage = Math.round((progress.completedQuestions.length / activeSet.questions.length) * 100);
 
   const getUnlockMessage = (diff: string) => {

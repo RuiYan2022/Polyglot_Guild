@@ -1,4 +1,3 @@
-
 export enum Role {
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT'
@@ -12,7 +11,8 @@ export enum ProgrammingLanguage {
   JAVA = 'Java',
   CPP = 'C++',
   TYPESCRIPT = 'TypeScript',
-  RUBY = 'Ruby'
+  RUBY = 'Ruby',
+  R = 'R'
 }
 
 export interface TeacherProfile {

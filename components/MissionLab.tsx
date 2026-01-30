@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ProgrammingLanguage, Question, QuestionSet } from '../types';
 import { generateMissions } from '../services/geminiService';
@@ -51,11 +50,14 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
   };
 
   const addManualMission = () => {
+    const hashLanguages = [ProgrammingLanguage.PYTHON, ProgrammingLanguage.R, ProgrammingLanguage.RUBY];
+    const starterComment = hashLanguages.includes(language) ? '# Start coding here...' : '// Start coding here...';
+    
     const newMission: Question = {
       id: `q_manual_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       title: `New ${activeTab} Mission`,
       description: 'Describe the challenge objectives here...',
-      starterCode: language === ProgrammingLanguage.PYTHON ? '# Start coding here...' : '// Start coding here...',
+      starterCode: starterComment,
       solutionHint: 'Provide a helpful nudge for students...',
       difficulty: activeTab,
       points: activeTab === 'Easy' ? 100 : activeTab === 'Medium' ? 250 : activeTab === 'Hard' ? 500 : 1000

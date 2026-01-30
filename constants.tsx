@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const LANGUAGES = [
@@ -7,7 +6,8 @@ export const LANGUAGES = [
   'Java',
   'C++',
   'TypeScript',
-  'Ruby'
+  'Ruby',
+  'R'
 ];
 
 export const ICONS = {

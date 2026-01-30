@@ -1,4 +1,4 @@
-// Fix: Added explicit typing for accumulator in reduce calls to ensure consistent numeric operations.
+
 import React, { useState, useEffect } from 'react';
 import { TeacherProfile, QuestionSet, StudentProgress, ClassProfile, StudentProfile } from '../types';
 import { storageService } from '../services/storageService';
@@ -10,6 +10,8 @@ interface TeacherDashboardProps {
   profile: TeacherProfile;
 }
 
+type SortOption = 'xp-desc' | 'xp-asc' | 'name-asc';
+
 const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
   const [activeTab, setActiveTab] = useState<'missions' | 'students' | 'classes' | 'library' | 'analytics'>('missions');
   const [missions, setMissions] = useState<QuestionSet[]>([]);
@@ -19,6 +21,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
   const [approvedStudents, setApprovedStudents] = useState<StudentProfile[]>([]);
   
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
+  const [selectedMissionId, setSelectedMissionId] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<SortOption>('xp-desc');
   const [error, setError] = useState<string | null>(null);
   
   const [showLab, setShowLab] = useState(false);
@@ -130,13 +134,44 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
     }
   };
 
-  const filteredApproved = selectedClassId === 'all' 
-    ? approvedStudents 
-    : approvedStudents.filter(s => s.classId === selectedClassId);
+  // Logic for filtering and sorting
+  const getProcessedRoster = () => {
+    let list = [...approvedStudents];
+
+    // Filter by Class
+    if (selectedClassId !== 'all') {
+      list = list.filter(s => s.classId === selectedClassId);
+    }
+
+    // Filter by Mission Intelligence (Only show students who have engaged with this mission)
+    if (selectedMissionId !== 'all') {
+      list = list.filter(student => 
+        progress.some(p => p.studentUid === student.uid && p.questionSetId === selectedMissionId)
+      );
+    }
+
+    // Apply Sorting
+    list.sort((a, b) => {
+      // Logic for sorting by dynamic XP
+      const getXp = (s: StudentProfile) => {
+        if (selectedMissionId === 'all') return s.globalXp || 0;
+        const p = progress.find(p => p.studentUid === s.uid && p.questionSetId === selectedMissionId);
+        return p ? Object.values(p.scores || {}).reduce((acc: number, v: number) => acc + (v || 0), 0) : 0;
+      };
+
+      if (sortOrder === 'xp-desc') return getXp(b) - getXp(a);
+      if (sortOrder === 'xp-asc') return getXp(a) - getXp(b);
+      if (sortOrder === 'name-asc') return a.name.localeCompare(b.name);
+      return 0;
+    });
+
+    return list;
+  };
+
+  const filteredRoster = getProcessedRoster();
 
   const getAnalytics = () => {
-    // Explicitly type acc as number to avoid arithmetic operation errors
-    const totalXp = approvedStudents.reduce((acc: number, s) => acc + s.globalXp, 0);
+    const totalXp = approvedStudents.reduce((acc: number, s) => acc + (s.globalXp || 0), 0);
     const avgXp = approvedStudents.length > 0 ? Math.floor(totalXp / approvedStudents.length) : 0;
     
     const packStats = missions.map(set => {
@@ -251,7 +286,6 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mission Completion</p>
                      <p className="text-4xl font-black text-green-600">
-                       {/* Fix: Added explicit typing for accumulator in reduce call to ensure consistent numeric operations. */}
                        {packStats.length > 0 ? Math.round(packStats.reduce((acc: number, set) => acc + set.completionRate, 0) / packStats.length) : 0}%
                      </p>
                   </div>
@@ -269,7 +303,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mission Pack</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Language</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Completion Rate</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th className="px-8 py-4 text-[10px) font-black text-slate-400 uppercase tracking-widest">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -357,20 +391,54 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
 
               {/* ROSTER */}
               <div className="space-y-4">
-                <div className="flex justify-between items-end">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Academy Roster</h3>
-                  <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-slate-200">
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Filter:</span>
-                    <select 
-                      value={selectedClassId}
-                      onChange={e => setSelectedClassId(e.target.value)}
-                      className="bg-transparent border-none text-xs font-black text-slate-700 outline-none focus:ring-0"
-                    >
-                        <option value="all">Entire Academy</option>
-                        {classes.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
+                  
+                  {/* Advanced Filters and Sorts */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Class Filter */}
+                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Class:</span>
+                      <select 
+                        value={selectedClassId}
+                        onChange={e => setSelectedClassId(e.target.value)}
+                        className="bg-transparent border-none text-xs font-black text-slate-700 outline-none focus:ring-0"
+                      >
+                          <option value="all">Entire Academy</option>
+                          {classes.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {/* Mission Intelligence Filter */}
+                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Mission:</span>
+                      <select 
+                        value={selectedMissionId}
+                        onChange={e => setSelectedMissionId(e.target.value)}
+                        className="bg-transparent border-none text-xs font-black text-slate-700 outline-none focus:ring-0 max-w-[120px]"
+                      >
+                          <option value="all">Any Interaction</option>
+                          {missions.map(m => (
+                            <option key={m.id} value={m.id}>{m.title}</option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {/* XP Sort Dropdown */}
+                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Order:</span>
+                      <select 
+                        value={sortOrder}
+                        onChange={e => setSortOrder(e.target.value as SortOption)}
+                        className="bg-transparent border-none text-xs font-black text-slate-700 outline-none focus:ring-0"
+                      >
+                          <option value="xp-desc">XP (High to Low)</option>
+                          <option value="xp-asc">XP (Low to High)</option>
+                          <option value="name-asc">Alphabetical</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -381,22 +449,36 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[180px]">Explorer</th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Classroom</th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mastery</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[240px]">Mission Intelligence</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Global XP</th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[280px]">
+                          {selectedMissionId === 'all' ? 'Mission Intelligence' : 'Mission Status'}
+                        </th>
+                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {selectedMissionId === 'all' ? 'Global XP' : 'Mission XP'}
+                        </th>
                         <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {filteredApproved.length === 0 ? (
+                      {filteredRoster.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-8 py-20 text-center text-slate-400 text-sm font-medium italic">
-                            No approved explorers found.
+                            No explorers matching the current filters.
                           </td>
                         </tr>
                       ) : (
-                        filteredApproved.map(student => {
+                        filteredRoster.map(student => {
                           const targetClass = classes.find(c => c.id === student.classId);
                           const studentProgressRecords = progress.filter(p => p.studentUid === student.uid);
+                          
+                          // Dynamically filter the visible mission badges
+                          const visibleProgress = selectedMissionId === 'all' 
+                            ? studentProgressRecords 
+                            : studentProgressRecords.filter(p => p.questionSetId === selectedMissionId);
+
+                          // Dynamically calculate XP for the XP column
+                          const displayedXp = selectedMissionId === 'all'
+                            ? (student.globalXp || 0)
+                            : visibleProgress.reduce((sum, p) => sum + Object.values(p.scores || {}).reduce((acc: number, v: number) => acc + (v || 0), 0), 0);
 
                           return (
                             <tr key={student.uid} className="hover:bg-slate-50/80 transition-colors">
@@ -429,22 +511,20 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                               </td>
                               <td className="px-8 py-6">
                                 <div className="flex flex-wrap gap-2">
-                                  {studentProgressRecords.length > 0 ? (
-                                    studentProgressRecords.map(p => {
+                                  {visibleProgress.length > 0 ? (
+                                    visibleProgress.map(p => {
                                       const pack = missions.find(m => m.id === p.questionSetId);
-                                      // Fix: Added explicit typing for accumulator in reduce call to ensure consistent numeric operations.
                                       const packXp = Object.values(p.scores || {}).reduce((acc: number, v: number) => acc + (v || 0), 0);
-                                      // Fix: Added explicit typing for accumulator and optional chaining for safer arithmetic operations.
                                       const totalPossibleXp = pack?.questions?.reduce((acc: number, q) => acc + q.points, 0) || 0;
                                       const completionPercent = totalPossibleXp > 0 ? Math.round((packXp / totalPossibleXp) * 100) : 0;
 
                                       return (
                                         <div key={p.id} className="group relative">
-                                          <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl cursor-default hover:bg-indigo-100 transition-colors">
-                                            <span className="text-[10px] font-black text-indigo-700 max-w-[100px] truncate">
+                                          <div className="flex items-start gap-1.5 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl cursor-default hover:bg-indigo-100 transition-colors">
+                                            <span className="text-[10px] font-black text-indigo-700 max-w-[140px] whitespace-normal leading-tight break-words">
                                               {pack?.title || 'Unknown Pack'}
                                             </span>
-                                            <span className="text-[10px] font-black bg-white px-1.5 py-0.5 rounded shadow-sm text-indigo-600">
+                                            <span className="text-[10px] font-black bg-white px-1.5 py-0.5 rounded shadow-sm text-indigo-600 flex-none">
                                               {packXp} XP
                                             </span>
                                           </div>
@@ -456,13 +536,17 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                                       );
                                     })
                                   ) : (
-                                    <span className="text-[9px] font-black text-slate-300 uppercase italic">No Active Missions</span>
+                                    <span className="text-[9px] font-black text-slate-300 uppercase italic">
+                                      {selectedMissionId === 'all' ? 'No Active Missions' : 'Not Started'}
+                                    </span>
                                   )}
                                 </div>
                               </td>
                               <td className="px-8 py-6">
                                 <div className="flex items-baseline gap-1">
-                                  <span className="font-black text-slate-900 text-lg">{student.globalXp.toLocaleString()}</span>
+                                  <span className={`font-black text-lg ${selectedMissionId !== 'all' ? 'text-indigo-600' : 'text-slate-900'}`}>
+                                    {displayedXp.toLocaleString()}
+                                  </span>
                                   <span className="text-[9px] font-black text-indigo-400 uppercase">XP</span>
                                 </div>
                               </td>
@@ -547,7 +631,6 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
               ) : (
                 missions.map(set => (
                   <div key={set.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 hover:border-indigo-300 transition-all shadow-sm group relative flex flex-col h-full hover:shadow-xl">
-                    {/* Absolute Professional-Grade Confirmation Action Overlay */}
                     <div className="absolute top-4 right-4 z-[50]">
                       {deletingSetId === set.id ? (
                         <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-right-2 border border-slate-800">
@@ -605,7 +688,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                       onClick={() => { setActiveSetForEdit(set); setShowLab(true); }}
                       className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 shadow-lg shadow-slate-200"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <ICONS.Terminal className="w-5 h-5" />
                       Modify Package
                     </button>
                   </div>

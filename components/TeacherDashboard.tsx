@@ -5,6 +5,12 @@ import { storageService } from '../services/storageService';
 import { ICONS } from '../constants';
 import MissionLab from './MissionLab';
 import Library from './Library';
+import { 
+  updatePassword, 
+  reauthenticateWithCredential, 
+  EmailAuthProvider 
+} from "firebase/auth";
+import { auth } from '../services/firebase';
 
 interface TeacherDashboardProps {
   profile: TeacherProfile;
@@ -13,7 +19,7 @@ interface TeacherDashboardProps {
 type SortOption = 'xp-desc' | 'xp-asc' | 'name-asc';
 
 const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
-  const [activeTab, setActiveTab] = useState<'missions' | 'students' | 'classes' | 'library' | 'analytics'>('missions');
+  const [activeTab, setActiveTab] = useState<'missions' | 'students' | 'classes' | 'library' | 'analytics' | 'security'>('missions');
   const [missions, setMissions] = useState<QuestionSet[]>([]);
   const [progress, setProgress] = useState<StudentProgress[]>([]);
   const [classes, setClasses] = useState<ClassProfile[]>([]);
@@ -32,6 +38,13 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
   const [isCreatingClass, setIsCreatingClass] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState<string | null>(null);
   const [deletingSetId, setDeletingSetId] = useState<string | null>(null);
+
+  // Password Change State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
   const loadData = async () => {
     try {
@@ -131,6 +144,46 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
       setActiveSetForEdit(undefined);
     } catch (err: any) {
       alert(err.message || "Failed to save changes.");
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordFeedback(null);
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: 'error', msg: 'New passwords do not match.' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordFeedback({ type: 'error', msg: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) throw new Error("No active session found.");
+
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Update password
+      await updatePassword(user, newPassword);
+      
+      setPasswordFeedback({ type: 'success', msg: 'Password updated successfully.' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error("Password change error:", err);
+      let msg = "Failed to update password.";
+      if (err.code === 'auth/wrong-password') msg = "The current password you entered is incorrect.";
+      setPasswordFeedback({ type: 'error', msg });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -236,7 +289,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
             { id: 'classes', label: 'Classrooms', icon: ICONS.Book },
             { id: 'students', label: 'Intelligence', icon: ICONS.Users, count: pendingStudents.length },
             { id: 'analytics', label: 'Analytics Hub', icon: ICONS.Trophy },
-            { id: 'library', label: 'Global Library', icon: ICONS.Globe }
+            { id: 'library', label: 'Global Library', icon: ICONS.Globe },
+            { id: 'security', label: 'Security', icon: ICONS.Lock }
           ].map(tab => (
             <button
               key={tab.id}
@@ -267,6 +321,92 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
               onSave={handleSaveSet} 
               onCancel={() => { setShowLab(false); setActiveSetForEdit(undefined); }} 
             />
+          ) : activeTab === 'security' ? (
+            <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8 py-10">
+               <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-4 mb-8">
+                     <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
+                        <ICONS.Lock className="w-8 h-8" />
+                     </div>
+                     <div>
+                        <h3 className="text-2xl font-black text-slate-900">Security Credentials</h3>
+                        <p className="text-slate-500 text-sm font-medium">Secure your academy by updating your temporary access key.</p>
+                     </div>
+                  </div>
+
+                  {passwordFeedback && (
+                    <div className={`mb-8 p-4 rounded-xl border flex items-center gap-3 animate-in slide-in-from-top-2 ${
+                      passwordFeedback.type === 'success' ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'
+                    }`}>
+                      <div className="flex-none">
+                        {passwordFeedback.type === 'success' ? (
+                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                        ) : (
+                          <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                        )}
+                      </div>
+                      <p className="text-xs font-black uppercase tracking-widest">{passwordFeedback.msg}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handlePasswordChange} className="space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Password</label>
+                       <input 
+                         type="password"
+                         required
+                         value={currentPassword}
+                         onChange={e => setCurrentPassword(e.target.value)}
+                         placeholder="Enter your current access key"
+                         className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold"
+                       />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label>
+                         <input 
+                           type="password"
+                           required
+                           value={newPassword}
+                           onChange={e => setNewPassword(e.target.value)}
+                           placeholder="At least 6 chars"
+                           className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold"
+                         />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm New Password</label>
+                         <input 
+                           type="password"
+                           required
+                           value={confirmPassword}
+                           onChange={e => setConfirmPassword(e.target.value)}
+                           placeholder="Re-enter password"
+                           className="w-full px-5 py-4 rounded-2xl border border-slate-200 outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold"
+                         />
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isUpdatingPassword || !currentPassword || !newPassword}
+                      className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
+                    >
+                      {isUpdatingPassword ? 'Synchronizing Credentials...' : 'Establish New Password'}
+                    </button>
+                  </form>
+               </div>
+               
+               <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex items-start gap-4">
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-indigo-600">
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-indigo-900 uppercase tracking-tight mb-1">Teacher Advisory</p>
+                    <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">Updating your password will not affect your students' access to missions. However, ensure you use a strong password as this account grants administrative control over the entire academy.</p>
+                  </div>
+               </div>
+            </div>
           ) : activeTab === 'analytics' ? (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                {/* Stat Cards */}
@@ -303,7 +443,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mission Pack</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Language</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Completion Rate</th>
-                        <th className="px-8 py-4 text-[10px) font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">

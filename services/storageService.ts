@@ -68,6 +68,30 @@ class StorageService {
     }
   }
 
+  async verifyTAAccess(academyCode: string, classCode: string, taKey: string): Promise<{ teacher: TeacherProfile, class: ClassProfile } | undefined> {
+    try {
+      const teacher = await this.getTeacherByCode(academyCode);
+      if (!teacher) return undefined;
+
+      const q = query(
+        collection(db, "classes"), 
+        where("code", "==", classCode.toUpperCase()), 
+        where("teacherId", "==", teacher.uid),
+        where("taKey", "==", taKey.toUpperCase()),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) return undefined;
+      
+      return {
+        teacher,
+        class: querySnapshot.docs[0].data() as ClassProfile
+      };
+    } catch (error) {
+      this.handleErr(error, "verifyTAAccess");
+    }
+  }
+
   async saveClass(classData: ClassProfile): Promise<void> {
     try {
       await setDoc(doc(db, "classes", classData.id), classData);
@@ -129,6 +153,21 @@ class StorageService {
       return querySnapshot.docs.map(doc => doc.data() as StudentProfile);
     } catch (error) {
       this.handleErr(error, "getApprovedStudents");
+      return [];
+    }
+  }
+
+  async getStudentsByClass(classId: string): Promise<StudentProfile[]> {
+    try {
+      const q = query(
+        collection(db, "students"), 
+        where("classId", "==", classId),
+        where("status", "==", "approved")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => doc.data() as StudentProfile);
+    } catch (error) {
+      this.handleErr(error, "getStudentsByClass");
       return [];
     }
   }
@@ -278,6 +317,21 @@ class StorageService {
     }
   }
 
+  async getProgressByClass(classId: string): Promise<StudentProgress[]> {
+    try {
+      const q = query(
+        collection(db, "progress"), 
+        where("classId", "==", classId)
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs
+        .map(doc => doc.data() as StudentProgress);
+    } catch (error) {
+      this.handleErr(error, "getProgressByClass");
+      return [];
+    }
+  }
+
   async saveProgress(progress: StudentProgress): Promise<void> {
     try {
       const progressRef = doc(db, "progress", progress.id);
@@ -286,7 +340,7 @@ class StorageService {
         lastActive: Date.now()
       }, { merge: true });
       
-      await this.updateGlobalStudentStats(progress.studentUid, progress.studentName);
+      this.updateGlobalStudentStats(progress.studentUid, progress.studentName).catch(() => {});
     } catch (error) {
       this.handleErr(error, "saveProgress");
     }
@@ -335,7 +389,7 @@ class StorageService {
         completedSets: Array.from(new Set(completedSets))
       }, { merge: true });
     } catch (error) {
-      this.handleErr(error, "updateGlobalStudentStats");
+      console.warn(`Firestore Warning [updateGlobalStudentStats]:`, error);
     }
   }
 }

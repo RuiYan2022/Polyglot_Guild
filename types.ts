@@ -1,6 +1,8 @@
+
 export enum Role {
   TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT'
+  STUDENT = 'STUDENT',
+  TA = 'TA'
 }
 
 export type StudentStatus = 'pending' | 'approved' | 'denied';
@@ -11,8 +13,7 @@ export enum ProgrammingLanguage {
   JAVA = 'Java',
   CPP = 'C++',
   TYPESCRIPT = 'TypeScript',
-  RUBY = 'Ruby',
-  R = 'R'
+  RUBY = 'Ruby'
 }
 
 export interface TeacherProfile {
@@ -28,6 +29,7 @@ export interface ClassProfile {
   teacherId: string;
   name: string;
   code: string; // Unique class-specific code for students
+  taKey: string; // Secret key for TA access
   createdAt: number;
 }
 
@@ -65,22 +67,30 @@ export interface QuestionSet {
   questions: Question[];
   isPublic: boolean;
   createdAt: number;
-  // Dynamic progression gates
   unlockEasyToMedium: number;
   unlockMediumToHard: number;
   unlockHardToChallenging: number;
 }
 
+export interface FeedbackEntry {
+  timestamp: number;
+  questionId: string;
+  success: boolean;
+  score: number;
+  feedback: string;
+}
+
 export interface StudentProgress {
   id: string;
-  studentUid: string; // Linked to StudentProfile.uid
+  studentUid: string;
   studentName: string; 
   teacherId: string;
   classId: string; 
   questionSetId: string;
-  completedQuestions: string[]; // Question IDs
-  scores: Record<string, number>; // questionId -> score
-  draftCodes?: Record<string, string>; // questionId -> current work code
+  completedQuestions: string[]; 
+  scores: Record<string, number>; 
+  draftCodes?: Record<string, string>; 
+  feedbackHistory?: FeedbackEntry[]; // New persistent history
   lastActive: number;
   language: ProgrammingLanguage;
 }

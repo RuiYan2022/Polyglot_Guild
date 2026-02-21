@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ProgrammingLanguage, Question, QuestionSet } from '../types';
 import { generateMissions } from '../services/geminiService';
@@ -50,14 +51,11 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
   };
 
   const addManualMission = () => {
-    const hashLanguages = [ProgrammingLanguage.PYTHON, ProgrammingLanguage.R, ProgrammingLanguage.RUBY];
-    const starterComment = hashLanguages.includes(language) ? '# Start coding here...' : '// Start coding here...';
-    
     const newMission: Question = {
       id: `q_manual_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       title: `New ${activeTab} Mission`,
       description: 'Describe the challenge objectives here...',
-      starterCode: starterComment,
+      starterCode: language === ProgrammingLanguage.PYTHON ? '# Start coding here...' : '// Start coding here...',
       solutionHint: 'Provide a helpful nudge for students...',
       difficulty: activeTab,
       points: activeTab === 'Easy' ? 100 : activeTab === 'Medium' ? 250 : activeTab === 'Hard' ? 500 : 1000
@@ -126,35 +124,35 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
     .filter(m => m.difficulty === activeTab);
 
   return (
-    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-w-5xl mx-auto w-full animate-in fade-in zoom-in-95 duration-300">
-      <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/5 overflow-hidden max-w-5xl mx-auto w-full animate-in fade-in zoom-in-95 duration-300 transition-colors duration-300">
+      <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-black text-slate-800">{initialSet ? 'Edit Mission Pack' : 'Mission Creator'}</h2>
-          <p className="text-xs text-slate-500 font-medium">
+          <h2 className="text-xl font-black text-slate-800 dark:text-white">{initialSet ? 'Edit Mission Pack' : 'Mission Creator'}</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-500 font-medium">
             Strategic hybrid mission architect
           </p>
         </div>
-        <button onClick={onCancel} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 text-2xl leading-none">&times;</button>
+        <button onClick={onCancel} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400 dark:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
 
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mission Pack Title</label>
+            <label className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Mission Pack Title</label>
             <input 
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g., Intro to Data Structures"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium placeholder:text-slate-300 dark:placeholder:text-slate-800"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Target Language</label>
+            <label className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Target Language</label>
             <select 
               value={language}
               onChange={e => setLanguage(e.target.value as ProgrammingLanguage)}
               disabled={!!initialSet}
-              className={`w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white font-bold text-indigo-600 ${!!initialSet ? 'opacity-60 cursor-not-allowed' : ''}`}
+              className={`w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white dark:bg-slate-950 font-bold text-indigo-600 dark:text-indigo-400 ${!!initialSet ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               {LANGUAGES.map(lang => (
                 <option key={lang} value={lang}>{lang}</option>
@@ -163,47 +161,47 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
           </div>
         </div>
 
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+        <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-200 dark:border-white/5 space-y-4">
           <div className="flex items-center gap-2">
-            <ICONS.Trophy className="w-4 h-4 text-indigo-500" />
-            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Global Progression Gates</label>
+            <ICONS.Trophy className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <label className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Global Progression Gates</label>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">Easy to unlock Medium</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-600">Easy to unlock Medium</label>
                 <input 
                   type="number" 
                   min="0"
                   value={unlockEasyToMedium}
                   onChange={e => setUnlockEasyToMedium(parseInt(e.target.value) || 0)}
-                  className="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600"
+                  className="px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600 dark:text-indigo-400 outline-none"
                 />
              </div>
              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">Medium to unlock Hard</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-600">Medium to unlock Hard</label>
                 <input 
                   type="number" 
                   min="0"
                   value={unlockMediumToHard}
                   onChange={e => setUnlockMediumToHard(parseInt(e.target.value) || 0)}
-                  className="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600"
+                  className="px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600 dark:text-indigo-400 outline-none"
                 />
              </div>
              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">Hard to unlock Challenging</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-600">Hard to unlock Challenging</label>
                 <input 
                   type="number" 
                   min="0"
                   value={unlockHardToChallenging}
                   onChange={e => setUnlockHardToChallenging(parseInt(e.target.value) || 0)}
-                  className="px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600"
+                  className="px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-600 dark:text-indigo-400 outline-none"
                 />
              </div>
           </div>
         </div>
 
-        <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 space-y-4">
-          <label className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
+          <label className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
             <ICONS.Globe className="w-4 h-4" /> AI Mission Scout (Current Target: {activeTab})
           </label>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -211,12 +209,12 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
               value={topic}
               onChange={e => setTopic(e.target.value)}
               placeholder="e.g. Recursion, For Loops, API calls..."
-              className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+              className="flex-1 px-4 py-3 rounded-xl border border-indigo-200 dark:border-indigo-900/30 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-800"
             />
             <button 
               onClick={handleGenerate}
               disabled={isGenerating || !topic}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20"
             >
               {isGenerating ? 'Analyzing...' : 'Generate Missions'}
             </button>
@@ -224,7 +222,7 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
         </div>
 
         <div className="space-y-4">
-          <div className="flex justify-between items-end border-b border-slate-100 pb-2">
+          <div className="flex justify-between items-end border-b border-slate-100 dark:border-white/5 pb-2">
             <div className="flex gap-2">
               {(['Easy', 'Medium', 'Hard', 'Challenging'] as Difficulty[]).map(diff => (
                 <button 
@@ -235,7 +233,7 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                     setDeletingQuestionIdx(null);
                   }}
                   className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-t-xl transition-all ${
-                    activeTab === diff ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                    activeTab === diff ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-950 text-slate-400 dark:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-900'
                   }`}
                 >
                   {diff} ({missions.filter(m => m.difficulty === diff).length})
@@ -244,7 +242,7 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
             </div>
             <button 
               onClick={addManualMission}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mb-1 px-3 py-1 bg-indigo-50 rounded-lg"
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-1 mb-1 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg"
             >
               <ICONS.Plus className="w-3.5 h-3.5" /> Add New {activeTab} Mission
             </button>
@@ -252,29 +250,29 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
 
           <div className="space-y-4">
             {filteredMissions.length === 0 && (
-              <div className="py-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm">
+              <div className="py-12 text-center bg-slate-50 dark:bg-slate-950/50 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl text-slate-400 dark:text-slate-700 text-sm">
                 No missions in the {activeTab} tier yet.
               </div>
             )}
             {filteredMissions.map((m) => (
-              <div key={m.id} className={`p-6 rounded-2xl border transition-all ${editingIdx === m.originalIndex ? 'border-indigo-500 ring-4 ring-indigo-50 shadow-xl bg-white' : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'}`}>
+              <div key={m.id} className={`p-6 rounded-2xl border transition-all ${editingIdx === m.originalIndex ? 'border-indigo-500 ring-4 ring-indigo-50 dark:ring-indigo-900/20 shadow-xl bg-white dark:bg-slate-900' : 'border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/30 hover:border-slate-300 dark:hover:border-white/10'}`}>
                 {editingIdx === m.originalIndex ? (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2 space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Mission Title</label>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Mission Title</label>
                         <input 
                           value={m.title}
                           onChange={e => updateMission(m.originalIndex, { title: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-lg outline-none focus:border-indigo-500 font-bold"
+                          className="w-full px-3 py-2 border dark:border-white/10 rounded-lg outline-none focus:border-indigo-500 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-bold"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Tier Context</label>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Tier Context</label>
                         <select 
                           value={m.difficulty}
                           onChange={e => updateMission(m.originalIndex, { difficulty: e.target.value as Difficulty })}
-                          className="w-full px-3 py-2 border rounded-lg outline-none focus:border-indigo-500 font-bold text-indigo-600 bg-white"
+                          className="w-full px-3 py-2 border dark:border-white/10 rounded-lg outline-none focus:border-indigo-500 font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-950"
                         >
                            <option value="Easy">Easy</option>
                            <option value="Medium">Medium</option>
@@ -284,44 +282,44 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Mission Objective</label>
+                      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Mission Objective</label>
                       <textarea 
                         value={m.description}
                         onChange={e => updateMission(m.originalIndex, { description: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg outline-none h-20 resize-none font-medium"
+                        className="w-full px-3 py-2 border dark:border-white/10 rounded-lg outline-none h-20 resize-none font-medium bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Starter Code Template</label>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Starter Code Template</label>
                         <textarea 
                           value={m.starterCode}
                           onChange={e => updateMission(m.originalIndex, { starterCode: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-lg outline-none h-32 font-mono text-xs bg-slate-900 text-slate-300 dark-scrollbar"
+                          className="w-full px-3 py-2 border dark:border-white/10 rounded-lg outline-none h-32 font-mono text-xs bg-slate-900 text-slate-300 dark-scrollbar"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Success Hint</label>
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Success Hint</label>
                         <textarea 
                           value={m.solutionHint}
                           onChange={e => updateMission(m.originalIndex, { solutionHint: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-lg outline-none h-32 text-xs italic bg-amber-50/30 text-slate-600"
+                          className="w-full px-3 py-2 border dark:border-white/10 rounded-lg outline-none h-32 text-xs italic bg-amber-50/30 dark:bg-amber-900/10 text-slate-600 dark:text-slate-400"
                         />
                       </div>
                     </div>
-                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                    <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-white/5">
                       <div className="space-y-1">
-                         <label className="text-[10px] font-bold text-slate-400 uppercase block">XP Reward</label>
+                         <label className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase block">XP Reward</label>
                          <input 
                            type="number"
                            value={m.points}
                            onChange={e => updateMission(m.originalIndex, { points: parseInt(e.target.value) || 0 })}
-                           className="w-24 px-3 py-1 border rounded-lg font-black text-indigo-600"
+                           className="w-24 px-3 py-1 border dark:border-white/10 rounded-lg font-black text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-950"
                          />
                       </div>
                       <div className="flex items-center gap-3">
                         {deletingQuestionIdx === m.originalIndex ? (
-                          <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl shadow-xl animate-in fade-in slide-in-from-right-2 border border-slate-800">
+                          <div className="flex items-center gap-2 bg-slate-900 dark:bg-black px-3 py-2 rounded-xl shadow-xl animate-in fade-in slide-in-from-right-2 border border-slate-800 dark:border-white/10">
                             <span className="text-[9px] font-black text-white uppercase tracking-tighter">Destroy?</span>
                             <button 
                               type="button"
@@ -347,27 +345,27 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                             Delete Mission
                           </button>
                         )}
-                        <button onClick={() => setEditingIdx(null)} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black shadow-lg">Lock Changes</button>
+                        <button onClick={() => setEditingIdx(null)} className="px-6 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-xs font-black shadow-lg">Lock Changes</button>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="w-10 h-10 rounded-full bg-white border flex items-center justify-center font-black text-slate-300 text-xs shadow-sm flex-none">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border dark:border-white/5 flex items-center justify-center font-black text-slate-300 dark:text-slate-700 text-xs shadow-sm flex-none">
                         {m.originalIndex + 1}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-black text-slate-800 truncate">{m.title}</h4>
+                        <h4 className="font-black text-slate-800 dark:text-white truncate">{m.title}</h4>
                         <div className="flex items-center gap-2">
                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${
-                             m.difficulty === 'Easy' ? 'bg-green-100 text-green-600' : 
-                             m.difficulty === 'Medium' ? 'bg-amber-100 text-amber-600' : 
-                             m.difficulty === 'Hard' ? 'bg-red-100 text-red-600' : 'bg-violet-100 text-violet-600'
+                             m.difficulty === 'Easy' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 
+                             m.difficulty === 'Medium' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' : 
+                             m.difficulty === 'Hard' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
                            }`}>
                              {m.difficulty}
                            </span>
-                           <span className="text-[10px] text-slate-400 font-black uppercase">{m.points} XP</span>
+                           <span className="text-[10px] text-slate-400 dark:text-slate-600 font-black uppercase">{m.points} XP</span>
                         </div>
                       </div>
                     </div>
@@ -377,7 +375,7 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                         <select 
                           value={m.difficulty}
                           onChange={(e) => moveMission(m.originalIndex, e.target.value as Difficulty)}
-                          className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none"
                         >
                           <option disabled>Move To Tier...</option>
                           <option value="Easy">Move to Easy</option>
@@ -391,13 +389,13 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                           setEditingIdx(m.originalIndex);
                           setDeletingQuestionIdx(null);
                         }}
-                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+                        className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm whitespace-nowrap"
                       >
                         Edit Details
                       </button>
 
                       {deletingQuestionIdx === m.originalIndex ? (
-                        <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl shadow-xl animate-in fade-in slide-in-from-right-2 border border-slate-800">
+                        <div className="flex items-center gap-2 bg-slate-900 dark:bg-black px-3 py-2 rounded-xl shadow-xl animate-in fade-in slide-in-from-right-2 border border-slate-800 dark:border-white/10">
                           <span className="text-[8px] font-black text-white uppercase tracking-tighter">Remove?</span>
                           <button 
                             type="button"
@@ -418,7 +416,7 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
                         <button 
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setDeletingQuestionIdx(m.originalIndex); }} 
-                          className="p-2 text-slate-300 hover:text-red-600 transition-all rounded-lg hover:bg-red-50 flex-none"
+                          className="p-2 text-slate-300 dark:text-slate-700 hover:text-red-600 dark:hover:text-red-400 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 flex-none"
                           title="Delete Mission"
                         >
                           <ICONS.Trash className="w-5 h-5" />
@@ -432,33 +430,33 @@ const MissionLab: React.FC<MissionLabProps> = ({ teacherId, authorName, initialS
           </div>
         </div>
 
-        <div className="pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div className="pt-8 border-t border-slate-100 dark:border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Portal Passcode</label>
+            <label className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Portal Passcode</label>
             <input 
               value={passcode}
               onChange={e => setPasscode(e.target.value.toUpperCase())}
               placeholder="e.g. MISSION-ALPHA"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-indigo-600 uppercase"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase placeholder:text-slate-300 dark:placeholder:text-slate-800"
             />
           </div>
-          <label className="flex items-center gap-3 cursor-pointer p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+          <label className="flex items-center gap-3 cursor-pointer p-4 rounded-xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-slate-950/50 transition-colors">
             <input 
               type="checkbox" 
               checked={isPublic}
               onChange={e => setIsPublic(e.target.checked)}
-              className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="h-5 w-5 rounded border-slate-300 dark:border-white/10 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-950"
             />
             <div>
-              <span className="text-sm font-bold text-slate-700">Publish to Global Library</span>
-              <p className="text-[10px] text-slate-400">Collaborate with the worldwide Guild community.</p>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Publish to Global Library</span>
+              <p className="text-[10px] text-slate-400 dark:text-slate-600">Collaborate with the worldwide Guild community.</p>
             </div>
           </label>
         </div>
       </div>
 
-      <div className="p-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-4">
-        <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold text-sm">Discard</button>
+      <div className="p-6 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-white/5 flex flex-col sm:flex-row justify-end gap-4">
+        <button onClick={onCancel} className="px-6 py-3 text-slate-500 dark:text-slate-500 font-bold text-sm hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Discard</button>
         <button 
           onClick={handleSave}
           disabled={missions.length === 0}

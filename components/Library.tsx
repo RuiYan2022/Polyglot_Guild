@@ -27,7 +27,7 @@ const Library: React.FC<LibraryProps> = ({ currentTeacherId, onImport }) => {
     onImport();
   };
 
-  if (loading) return <div className="text-center py-20 animate-pulse text-slate-400">Scanning global archives...</div>;
+  if (loading) return <div className="text-center py-20 animate-pulse text-slate-400 dark:text-slate-600">Scanning global archives...</div>;
 
   return (
     <div className="space-y-6">
@@ -41,26 +41,26 @@ const Library: React.FC<LibraryProps> = ({ currentTeacherId, onImport }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {publicSets.length === 0 ? (
-          <div className="col-span-full py-20 text-center text-slate-400">No public missions shared yet. Be the first!</div>
+          <div className="col-span-full py-20 text-center text-slate-400 dark:text-slate-600">No public missions shared yet. Be the first!</div>
         ) : (
           publicSets.map(set => (
-            <div key={set.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div key={set.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-2xl flex flex-col transition-colors duration-300">
               <div className="flex justify-between items-start mb-4">
-                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full">{set.language}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase">By {set.authorName}</span>
+                <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-full">{set.language}</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">By {set.authorName}</span>
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">{set.title}</h3>
-              <p className="text-slate-500 text-sm mb-6 flex-1 line-clamp-3">{set.description}</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{set.title}</h3>
+              <p className="text-slate-500 dark:text-slate-500 text-sm mb-6 flex-1 line-clamp-3">{set.description}</p>
               
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-1 text-slate-400 text-xs font-bold">
+              <div className="flex justify-between items-center pt-4 border-t border-slate-50 dark:border-white/5">
+                <div className="flex items-center gap-1 text-slate-400 dark:text-slate-600 text-xs font-bold">
                   <ICONS.Terminal className="w-4 h-4" />
                   {set.questions.length} Missions
                 </div>
                 <button 
                   onClick={() => handleImport(set.id)}
                   disabled={set.teacherId === currentTeacherId}
-                  className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 disabled:opacity-0 transition-all"
+                  className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-0 transition-all"
                 >
                   Import Set
                 </button>

@@ -1,23 +1,29 @@
 
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans;
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-300;
   }
 }
 
 @layer components {
   .glass-morphism {
-    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border border-white/20 dark:border-white/5 shadow-xl;
   }
   
   .saas-card {
-    @apply bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300;
+    @apply bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-xl transition-all duration-300;
   }
 
   .btn-primary {
-    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-lg shadow-indigo-100 disabled:opacity-50;
+    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-2xl transition-all active:scale-95 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 disabled:opacity-50;
   }
 }
 
@@ -31,11 +37,11 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  @apply bg-slate-400 dark:bg-slate-600;
 }
 
 .dark-scrollbar::-webkit-scrollbar-thumb {

@@ -1,14 +1,9 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
 import { ProgrammingLanguage, Question } from '../types';
-
-// Initialize the Gemini API client
-// Always use process.env.GEMINI_API_KEY for the Gemini API.
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
  * MISSION GENERATION
- * Calls Gemini API directly from the client.
+ * Calls the backend API.
  */
 export const generateMissions = async (
   topic: string, 
@@ -16,33 +11,17 @@ export const generateMissions = async (
   count: number = 3
 ): Promise<Question[]> => {
   try {
-    const response = await genAI.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate ${count} coding missions about "${topic}" in ${language}. 
-                 Each mission should have a title, description, starter code, a brief solution hint, and a points value.
-                 Difficulty must be one of: Easy, Medium, Hard, or Challenging. 
-                 Suggested points: Easy=100, Medium=250, Hard=500, Challenging=1000.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              starterCode: { type: Type.STRING },
-              solutionHint: { type: Type.STRING },
-              difficulty: { type: Type.STRING },
-              points: { type: Type.NUMBER }
-            },
-            required: ["title", "description", "starterCode", "solutionHint", "difficulty", "points"]
-          }
-        }
-      }
+    const response = await fetch("/api/generate-missions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, language, count }),
     });
 
-    const missions = JSON.parse(response.text || '[]');
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.statusText}`);
+    }
+
+    const missions = await response.json();
     return missions.map((q: any) => ({
       ...q,
       id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
@@ -55,7 +34,7 @@ export const generateMissions = async (
 
 /**
  * CODE EVALUATION STREAM
- * Calls Gemini API directly from the client with streaming enabled.
+ * Calls the backend API with streaming enabled.
  */
 export const evaluateCodeStream = async function* (
   language: ProgrammingLanguage,
@@ -63,39 +42,43 @@ export const evaluateCodeStream = async function* (
   submittedCode: string
 ) {
   try {
-    const streamResponse = await genAI.models.generateContentStream({
-      model: 'gemini-3-flash-preview',
-      contents: `You are an expert ${language} tutor. Evaluate the following code submission.
-                 
-                 PROBLEM: ${problemDescription}
-                 
-                 SUBMITTED CODE:
-                 \`\`\`${language.toLowerCase()}
-                 ${submittedCode}
-                 \`\`\`
-                 
-                 INSTRUCTION:
-                 1. If the code is CORRECT and solves the problem optimally:
-                    - Be extremely brief. Just confirm it's correct (e.g., "Logic verified. Great job!").
-                 2. If the code is INCORRECT or has logic errors:
-                    - Provide detailed conversational feedback and 2-3 specific suggestions for improvement.
-                 3. At the very end of your response, include the diagnostic result in JSON format between [DATA] and [/DATA] tags.
-                 
-                 JSON SCHEMA:
-                 {
-                   "success": boolean,
-                   "score": number,
-                   "feedback": string,
-                   "suggestions": string[]
-                 }`,
-      config: {
-        thinkingConfig: { thinkingLevel: 0 as any } // Use 0 for low latency if applicable, or omit
-      }
+    const response = await fetch("/api/evaluate-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, problemDescription, submittedCode }),
     });
 
-    for await (const chunk of streamResponse) {
-      if (chunk.text) {
-        yield { text: chunk.text };
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No reader available");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") return;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.text) {
+              yield { text: parsed.text };
+            }
+          } catch (e) {
+            console.error("Error parsing stream chunk:", e);
+          }
+        }
       }
     }
   } catch (error: any) {

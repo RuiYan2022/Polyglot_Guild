@@ -33,6 +33,8 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   const [unlockedMsg, setUnlockedMsg] = useState<string | null>(null);
   const [globalProfile, setGlobalProfile] = useState<StudentProfile>(profile);
   const [progress, setProgress] = useState<StudentProgress | null>(null);
+  const [showQuestComplete, setShowQuestComplete] = useState(false);
+  const [showOverdriveActivated, setShowOverdriveActivated] = useState(false);
 
   const saveTimeoutRef = useRef<any>(null);
   const difficulties: ('Easy' | 'Medium' | 'Hard' | 'Challenging')[] = ['Easy', 'Medium', 'Hard', 'Challenging'];
@@ -50,6 +52,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
       setUnlockedSets(filtered);
     }
     setLeaderboard(lb);
+    return updated;
   };
 
   useEffect(() => { refreshProfile(); }, [globalProfile.uid]);
@@ -176,8 +179,21 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
         };
         
         setProgress(newProgress);
-        await storageService.saveProgress(newProgress);
-        if (result.success) await refreshProfile();
+        await storageService.saveProgress(newProgress, currentMission.difficulty, earnedPoints);
+        
+        if (result.success) {
+          const updated = await refreshProfile();
+          if (updated) {
+            if (updated.dailyPoints >= 3 && globalProfile.dailyPoints < 3) {
+              setShowQuestComplete(true);
+              setTimeout(() => setShowQuestComplete(false), 5000);
+            }
+            if (updated.overdriveQuestionsLeft === 3 && globalProfile.overdriveQuestionsLeft < 3) {
+              setShowOverdriveActivated(true);
+              setTimeout(() => setShowOverdriveActivated(false), 5000);
+            }
+          }
+        }
         
         return result;
       }
@@ -242,13 +258,45 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   };
 
   if (view === 'hub') {
+    const overdriveActive = globalProfile.overdriveQuestionsLeft > 0;
+    
     return (
       <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden text-slate-900 dark:text-slate-100">
         {showTrophyRoom && <TrophyRoom profile={globalProfile} onClose={() => setShowTrophyRoom(false)} />}
+        
+        {/* Gamification Notifications */}
+        {showQuestComplete && (
+          <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-500">
+            <div className="bg-gradient-to-r from-amber-400 to-orange-500 p-6 rounded-[2rem] shadow-2xl shadow-orange-500/40 text-white flex items-center gap-6 border-4 border-white/20">
+              <div className="bg-white/20 p-4 rounded-2xl animate-bounce">
+                <ICONS.Trophy className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h4 className="text-xl font-black uppercase tracking-tight">Daily Quest Complete!</h4>
+                <p className="text-sm font-bold opacity-90">+500 XP Bonus & Streak Extended!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showOverdriveActivated && (
+          <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-500">
+            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-[2rem] shadow-2xl shadow-indigo-500/40 text-white flex items-center gap-6 border-4 border-white/20">
+              <div className="bg-white/20 p-4 rounded-2xl animate-pulse">
+                <ICONS.Zap className="w-8 h-8 text-yellow-300" />
+              </div>
+              <div>
+                <h4 className="text-xl font-black uppercase tracking-tight">Overdrive Activated!</h4>
+                <p className="text-sm font-bold opacity-90">2X XP for the next 3 nodes!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white dark:bg-slate-900/50 border-b border-slate-200 dark:border-white/5 p-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div><h1 className="text-3xl font-black tracking-tight uppercase">Mission Hub</h1><p className="text-indigo-600 dark:text-indigo-400 font-black uppercase text-[10px] tracking-widest mt-1">EXPLORER: {globalProfile.name}</p></div>
           <div className="flex items-center gap-4">
-            <div className="text-right mr-4"><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Mastery</p><div className="flex items-center gap-3"><span className="text-2xl font-black text-slate-900 dark:text-white">{globalProfile.globalXp.toLocaleString()}</span><span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded font-black uppercase">XP</span></div></div>
+            <div className="text-right mr-4"><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Mastery</p><div className="flex items-center gap-3"><span className={`text-2xl font-black ${overdriveActive ? 'text-amber-500 animate-pulse' : 'text-slate-900 dark:text-white'}`}>{globalProfile.globalXp.toLocaleString()}</span><span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded font-black uppercase">XP</span></div></div>
             <button onClick={() => setShowTrophyRoom(true)} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all group shadow-sm dark:shadow-xl" title="Trophy Room"><ICONS.Trophy className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform" /></button>
           </div>
         </div>
@@ -268,7 +316,60 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{unlockedSets.length === 0 ? <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900/40 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-white/5 text-slate-400 dark:text-slate-600 font-black uppercase text-[10px] tracking-widest">Waiting for mission sync...</div> : unlockedSets.map(set => <button key={set.id} onClick={() => handleSelectSet(set)} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all text-left group relative overflow-hidden hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-indigo-500/10"><div className="flex justify-between items-start mb-6"><div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform"><ICONS.Code className="w-6 h-6" /></div>{globalProfile.completedSets.includes(set.id) && <div className="bg-green-500/10 text-green-500 p-2 rounded-full"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg></div>}</div><h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors uppercase tracking-tight">{set.title}</h4><p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.15em]">{set.language} • {set.questions.length} Nodes</p></button>)}</div>
                 </section>
              </div>
-             <div className="space-y-8"><section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm dark:shadow-2xl"><h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-8 border-b border-slate-200 dark:border-white/5 pb-4 flex items-center gap-3"><ICONS.Trophy className="w-4 h-4 text-amber-500" /> Leaderboard</h3><div className="space-y-4">{leaderboard.map((student, idx) => { const isCurrent = student.uid === globalProfile.uid; return <div key={student.uid} className={`flex items-center gap-4 p-5 rounded-2xl transition-all ${isCurrent ? 'bg-indigo-600/10 border border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/5'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] ${idx === 0 ? 'bg-amber-500 text-amber-950 shadow-lg shadow-amber-500/30' : idx === 1 ? 'bg-slate-300 text-slate-950' : idx === 2 ? 'bg-orange-400 text-orange-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-600'}`}>{idx + 1}</div><div className="flex-1"><p className={`font-black text-xs uppercase tracking-tight ${isCurrent ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}>{isCurrent ? student.name : `Explorer #${idx + 1}`}</p><p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">{student.globalXp.toLocaleString()} XP</p></div></div>; })}</div></section></div>
+             <div className="space-y-8">
+                {/* Daily Quest Section */}
+                <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm dark:shadow-2xl">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Daily Quest</h3>
+                      <p className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Habit Builder</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-orange-100 dark:bg-orange-500/20 px-3 py-1.5 rounded-xl border border-orange-200 dark:border-orange-500/30">
+                      <ICONS.Flame className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      <span className="text-sm font-black text-orange-600 dark:text-orange-400">{globalProfile.streak || 0} Day Streak</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                        {globalProfile.dailyPoints >= 3 ? 'Goal Achieved!' : `${3 - globalProfile.dailyPoints} points to go`}
+                      </p>
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{Math.min(100, Math.round((globalProfile.dailyPoints / 3) * 100))}%</p>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-white/5">
+                      <div 
+                        className={`h-full transition-all duration-1000 ${globalProfile.dailyPoints >= 3 ? 'bg-gradient-to-r from-amber-400 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-indigo-600'}`} 
+                        style={{ width: `${Math.min(100, (globalProfile.dailyPoints / 3) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[1, 2, 3].map(pt => (
+                        <div key={pt} className={`h-1.5 rounded-full ${globalProfile.dailyPoints >= pt ? 'bg-amber-400' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider text-center">
+                      Easy: 1pt • Medium/Hard: 3pts
+                    </p>
+                  </div>
+                </section>
+
+                {overdriveActive && (
+                  <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-500/20 animate-pulse border border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white/20 p-3 rounded-2xl">
+                        <ICONS.Zap className="w-6 h-6 text-yellow-300" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Overdrive Active</p>
+                        <p className="text-lg font-black uppercase tracking-tight">2X XP for {globalProfile.overdriveQuestionsLeft} more nodes</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm dark:shadow-2xl"><h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-8 border-b border-slate-200 dark:border-white/5 pb-4 flex items-center gap-3"><ICONS.Trophy className="w-4 h-4 text-amber-500" /> Leaderboard</h3><div className="space-y-4">{leaderboard.map((student, idx) => { const isCurrent = student.uid === globalProfile.uid; return <div key={student.uid} className={`flex items-center gap-4 p-5 rounded-2xl transition-all ${isCurrent ? 'bg-indigo-600/10 border border-indigo-500/30' : 'bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/5'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] ${idx === 0 ? 'bg-amber-500 text-amber-950 shadow-lg shadow-amber-500/30' : idx === 1 ? 'bg-slate-300 text-slate-950' : idx === 2 ? 'bg-orange-400 text-orange-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-600'}`}>{idx + 1}</div><div className="flex-1"><div className="flex items-center gap-2"><p className={`font-black text-xs uppercase tracking-tight ${isCurrent ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}>{isCurrent ? student.name : `Explorer #${idx + 1}`}</p>{student.streak >= 3 && <ICONS.Flame className="w-3 h-3 text-orange-500 fill-current animate-pulse" />}</div><p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">{student.globalXp.toLocaleString()} XP</p></div></div>; })}</div></section>
+             </div>
           </div>
         </div>
       </div>
@@ -281,11 +382,66 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   const setCompletionPercentage = Math.round((progress.completedQuestions.length / activeSet.questions.length) * 100);
   const stagedCount = getStagedCount();
 
+  const overdriveActive = globalProfile.overdriveQuestionsLeft > 0;
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 overflow-hidden text-slate-900 dark:text-slate-100 relative">
+    <div className={`flex-1 flex flex-col md:flex-row bg-white dark:bg-slate-900 overflow-hidden text-slate-900 dark:text-slate-100 relative ${overdriveActive ? 'ring-inset ring-8 ring-indigo-500/20' : ''}`}>
+      {/* Gamification Notifications (Editor View) */}
+      {showQuestComplete && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-500">
+          <div className="bg-gradient-to-r from-amber-400 to-orange-500 p-6 rounded-[2rem] shadow-2xl shadow-orange-500/40 text-white flex items-center gap-6 border-4 border-white/20">
+            <div className="bg-white/20 p-4 rounded-2xl animate-bounce">
+              <ICONS.Trophy className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h4 className="text-xl font-black uppercase tracking-tight">Daily Quest Complete!</h4>
+              <p className="text-sm font-bold opacity-90">+500 XP Bonus & Streak Extended!</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOverdriveActivated && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-8 duration-500">
+          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-[2rem] shadow-2xl shadow-indigo-500/40 text-white flex items-center gap-6 border-4 border-white/20">
+            <div className="bg-white/20 p-4 rounded-2xl animate-pulse">
+              <ICONS.Zap className="w-8 h-8 text-yellow-300" />
+            </div>
+            <div>
+              <h4 className="text-xl font-black uppercase tracking-tight">Overdrive Activated!</h4>
+              <p className="text-sm font-bold opacity-90">2X XP for the next 3 nodes!</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full md:w-80 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col flex-none">
         <div className="p-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 flex justify-between items-center"><div><button onClick={() => setView('hub')} className="text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-2">← Exit Core</button><h2 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate w-48">{activeSet.title}</h2></div></div>
-        <div className="px-6 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/20"><div className="flex justify-between items-end mb-2"><p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Protocol Progress</p><p className="text-[10px] font-black text-slate-900 dark:text-white">{setCompletionPercentage}%</p></div><div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden"><div className="h-full bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-700" style={{ width: `${setCompletionPercentage}%` }}></div></div><div className="flex justify-between items-center mt-3"><span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Node XP</span><span className="text-sm font-black text-slate-900 dark:text-white">{setTotalXp}</span></div></div>
+        <div className="px-6 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/20">
+          <div className="flex justify-between items-end mb-2">
+            <p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Protocol Progress</p>
+            <p className="text-[10px] font-black text-slate-900 dark:text-white">{setCompletionPercentage}%</p>
+          </div>
+          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-700" style={{ width: `${setCompletionPercentage}%` }}></div>
+          </div>
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Node XP</span>
+            <span className={`text-sm font-black ${overdriveActive ? 'text-amber-500' : 'text-slate-900 dark:text-white'}`}>
+              {setTotalXp} {overdriveActive && <span className="text-[10px] ml-1">(2X ACTIVE)</span>}
+            </span>
+          </div>
+        </div>
+        
+        {overdriveActive && (
+          <div className="m-4 bg-indigo-600 p-4 rounded-2xl text-white shadow-lg shadow-indigo-500/30 flex items-center gap-3 animate-pulse">
+            <ICONS.Zap className="w-5 h-5 text-yellow-300" />
+            <div>
+              <p className="text-[8px] font-black uppercase tracking-widest opacity-80">Overdrive Status</p>
+              <p className="text-[10px] font-black uppercase">{globalProfile.overdriveQuestionsLeft} Nodes Remaining</p>
+            </div>
+          </div>
+        )}
         
         {stagedCount > 0 && (
           <button 

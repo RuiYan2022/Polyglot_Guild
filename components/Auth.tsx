@@ -271,7 +271,12 @@ export const StudentAuth: React.FC<AuthProps> = ({ onLogin }) => {
           status: 'pending',
           classId: targetClass.id,
           masterKey: teacher.uid,
-          unlockedSets: []
+          unlockedSets: [],
+          dailyPoints: 0,
+          lastDailyReset: Date.now(),
+          streak: 0,
+          overdriveQuestionsLeft: 0,
+          overdriveSessionsCompleted: 0
         };
         
         await storageService.saveStudentProfile(newStudent);

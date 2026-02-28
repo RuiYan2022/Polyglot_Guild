@@ -414,6 +414,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   <thead className="bg-slate-50 dark:bg-slate-950/50">
                     <tr>
                       <th className="px-8 py-5 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Explorer Name</th>
+                      <th className="px-8 py-5 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Status / Streak</th>
                       <th className="px-8 py-5 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Node Syncs</th>
                       <th 
                         className="px-8 py-5 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -431,7 +432,32 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-[10px]">
                               {student.name.substring(0, 2).toUpperCase()}
                             </div>
-                            <span className="font-black text-slate-900 dark:text-white text-xs uppercase">{student.name}</span>
+                            <div className="flex flex-col">
+                              <span className="font-black text-slate-900 dark:text-white text-xs uppercase">{student.name}</span>
+                              {student.overdriveQuestionsLeft > 0 && (
+                                <span className="text-[8px] font-black text-indigo-500 uppercase flex items-center gap-1">
+                                  <ICONS.Zap className="w-2.5 h-2.5 fill-current" /> Overdrive Active
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-3">
+                            {student.streak > 0 ? (
+                              <div className="flex items-center gap-1.5 bg-orange-100 dark:bg-orange-500/20 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-500/30">
+                                <ICONS.Flame className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 fill-current" />
+                                <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{student.streak}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[9px] font-black text-slate-300 dark:text-slate-800 uppercase tracking-widest">No Streak</span>
+                            )}
+                            
+                            {student.dailyPoints >= 3 && (
+                              <div className="bg-green-100 dark:bg-green-500/20 p-1.5 rounded-lg border border-green-200 dark:border-green-500/30" title="Daily Goal Met">
+                                <ICONS.Trophy className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-8 py-6">

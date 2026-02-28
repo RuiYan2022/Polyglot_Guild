@@ -44,6 +44,11 @@ export interface StudentProfile {
   classId: string;
   masterKey: string; // The teacherId (UID) they belong to
   unlockedSets: string[]; // IDs of Mission Packs they have unlocked with a passcode
+  dailyPoints: number;
+  lastDailyReset: number; // timestamp
+  streak: number;
+  overdriveQuestionsLeft: number;
+  overdriveSessionsCompleted: number;
 }
 
 export interface Question {

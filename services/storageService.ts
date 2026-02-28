@@ -113,7 +113,31 @@ class StorageService {
     try {
       const docRef = doc(db, "students", uid);
       const snap = await getDoc(docRef);
-      return snap.exists() ? snap.data() as StudentProfile : undefined;
+      if (!snap.exists()) return undefined;
+      
+      const profile = snap.data() as StudentProfile;
+      
+      // Check for daily reset
+      const now = Date.now();
+      const lastReset = profile.lastDailyReset || 0;
+      const isNewDay = new Date(now).toDateString() !== new Date(lastReset).toDateString();
+      
+      if (isNewDay) {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const wasActiveYesterday = new Date(lastReset).toDateString() === yesterday.toDateString();
+        
+        const updatedProfile = {
+          ...profile,
+          dailyPoints: 0,
+          lastDailyReset: now,
+          streak: wasActiveYesterday ? (profile.streak || 0) : 0
+        };
+        await this.saveStudentProfile(updatedProfile);
+        return updatedProfile;
+      }
+      
+      return profile;
     } catch (error) {
       this.handleErr(error, "getStudentProfile");
     }
@@ -332,7 +356,7 @@ class StorageService {
     }
   }
 
-  async saveProgress(progress: StudentProgress): Promise<void> {
+  async saveProgress(progress: StudentProgress, difficulty?: string, points?: number): Promise<void> {
     try {
       const progressRef = doc(db, "progress", progress.id);
       await setDoc(progressRef, {
@@ -340,7 +364,7 @@ class StorageService {
         lastActive: Date.now()
       }, { merge: true });
       
-      this.updateGlobalStudentStats(progress.studentUid, progress.studentName).catch(() => {});
+      await this.updateGlobalStudentStats(progress.studentUid, progress.studentName, difficulty, points);
     } catch (error) {
       this.handleErr(error, "saveProgress");
     }
@@ -361,7 +385,7 @@ class StorageService {
     }
   }
 
-  private async updateGlobalStudentStats(uid: string, name: string): Promise<void> {
+  private async updateGlobalStudentStats(uid: string, name: string, difficulty?: string, earnedPoints?: number): Promise<void> {
     try {
       const q = query(collection(db, "progress"), where("studentUid", "==", uid));
       const querySnapshot = await getDocs(q);
@@ -382,11 +406,55 @@ class StorageService {
       });
 
       const studentRef = doc(db, "students", uid);
+      const studentSnap = await getDoc(studentRef);
+      if (!studentSnap.exists()) return;
+      
+      const currentProfile = studentSnap.data() as StudentProfile;
+      let updatedXp = globalXp;
+      let dailyPoints = currentProfile.dailyPoints || 0;
+      let streak = currentProfile.streak || 0;
+      let overdriveQuestionsLeft = currentProfile.overdriveQuestionsLeft || 0;
+      let overdriveSessionsCompleted = currentProfile.overdriveSessionsCompleted || 0;
+      let lastDailyReset = currentProfile.lastDailyReset || Date.now();
+
+      // Gamification Logic if a question was just completed
+      if (difficulty && earnedPoints && earnedPoints > 0) {
+        // 1. Handle Overdrive (Double XP)
+        if (overdriveQuestionsLeft > 0) {
+          updatedXp += earnedPoints; // Add the bonus XP
+          overdriveQuestionsLeft--;
+        }
+
+        // 2. Handle Daily Points
+        const pointsToAdd = difficulty === 'Easy' ? 1 : 3;
+        const oldPoints = dailyPoints;
+        dailyPoints += pointsToAdd;
+
+        // Check for Daily Goal Completion (3 points)
+        if (oldPoints < 3 && dailyPoints >= 3) {
+          updatedXp += 500; // Daily Reward
+          streak++;
+        }
+
+        // 3. Check for 10k Milestone Overdrive Trigger
+        const oldMilestone = Math.floor((currentProfile.globalXp || 0) / 10000);
+        const newMilestone = Math.floor(updatedXp / 10000);
+        if (newMilestone > oldMilestone) {
+          overdriveQuestionsLeft = 3;
+          overdriveSessionsCompleted++;
+        }
+      }
+
       await setDoc(studentRef, {
         name,
-        globalXp,
+        globalXp: updatedXp,
         languageMastery,
-        completedSets: Array.from(new Set(completedSets))
+        completedSets: Array.from(new Set(completedSets)),
+        dailyPoints,
+        streak,
+        overdriveQuestionsLeft,
+        overdriveSessionsCompleted,
+        lastDailyReset
       }, { merge: true });
     } catch (error) {
       console.warn(`Firestore Warning [updateGlobalStudentStats]:`, error);

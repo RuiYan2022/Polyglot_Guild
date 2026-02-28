@@ -91,6 +91,64 @@ const TrophyRoom: React.FC<TrophyRoomProps> = ({ profile, onClose }) => {
               );
             })}
           </div>
+
+          <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-16 mb-2">Milestone Badges</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-10">Permanent honors for your dedication and skill.</p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+            {[
+              { 
+                id: '7day', 
+                name: '7-Day Voyager', 
+                desc: 'Maintain a 7-day streak', 
+                icon: ICONS.Flame, 
+                achieved: profile.streak >= 7,
+                color: 'text-orange-500'
+              },
+              { 
+                id: '30day', 
+                name: '30-Day Legend', 
+                desc: 'Maintain a 30-day streak', 
+                icon: ICONS.Flame, 
+                achieved: profile.streak >= 30,
+                color: 'text-red-500'
+              },
+              { 
+                id: '10k', 
+                name: '10k Club', 
+                desc: 'Reach 10,000 global XP', 
+                icon: ICONS.Trophy, 
+                achieved: profile.globalXp >= 10000,
+                color: 'text-amber-500'
+              },
+              { 
+                id: '100k', 
+                name: '100k Master', 
+                desc: 'Reach 100,000 global XP', 
+                icon: ICONS.Trophy, 
+                achieved: profile.globalXp >= 100000,
+                color: 'text-indigo-500'
+              },
+              { 
+                id: 'speed', 
+                name: 'Speed Demon', 
+                desc: 'Complete 10 Overdrive sessions', 
+                icon: ICONS.Zap, 
+                achieved: (profile.overdriveSessionsCompleted || 0) >= 10,
+                color: 'text-yellow-400'
+              },
+            ].map(badge => (
+              <div key={badge.id} className={`flex flex-col items-center text-center p-6 rounded-3xl border transition-all ${
+                badge.achieved ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg' : 'bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-900 opacity-30 grayscale'
+              }`}>
+                <div className={`p-4 rounded-2xl mb-4 ${badge.achieved ? 'bg-slate-50 dark:bg-slate-900' : 'bg-transparent'}`}>
+                  <badge.icon className={`w-8 h-8 ${badge.color}`} />
+                </div>
+                <h5 className="text-[10px] font-black uppercase tracking-tight mb-1">{badge.name}</h5>
+                <p className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase leading-tight">{badge.desc}</p>
+              </div>
+            ))}
+          </div>
           
           <div className="mt-12 p-8 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-6">
              <div className="p-4 bg-indigo-600 rounded-2xl">

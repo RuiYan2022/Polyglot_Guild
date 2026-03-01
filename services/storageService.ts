@@ -11,10 +11,11 @@ import {
   deleteDoc,
   updateDoc,
   arrayUnion,
-  orderBy
+  orderBy,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { TeacherProfile, QuestionSet, StudentProgress, StudentProfile, ClassProfile, StudentStatus } from '../types';
+import { TeacherProfile, QuestionSet, StudentProgress, StudentProfile, ClassProfile, StudentStatus, Directive } from '../types';
 
 class StorageService {
   private handleErr(error: any, context: string) {
@@ -382,6 +383,38 @@ class StorageService {
     } catch (error) {
       this.handleErr(error, "getStudentProgressByUid");
       return [];
+    }
+  }
+
+  // --- Directives (Guild Comms) ---
+  async sendDirective(directive: Directive): Promise<void> {
+    try {
+      await setDoc(doc(db, "directives", directive.id), directive);
+    } catch (error) {
+      this.handleErr(error, "sendDirective");
+    }
+  }
+
+  subscribeToDirectives(studentUid: string, callback: (directives: Directive[]) => void) {
+    const q = query(
+      collection(db, "directives"),
+      where("studentUid", "==", studentUid),
+      orderBy("timestamp", "desc")
+    );
+    
+    return onSnapshot(q, (snapshot) => {
+      const directives = snapshot.docs.map(doc => doc.data() as Directive);
+      callback(directives);
+    }, (error) => {
+      console.error("Directives Subscription Error:", error);
+    });
+  }
+
+  async markDirectiveAsRead(directiveId: string): Promise<void> {
+    try {
+      await updateDoc(doc(db, "directives", directiveId), { isRead: true });
+    } catch (error) {
+      this.handleErr(error, "markDirectiveAsRead");
     }
   }
 

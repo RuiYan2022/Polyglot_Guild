@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { QuestionSet, StudentProgress, AIResponse, StudentProfile, ProgrammingLanguage, Question, FeedbackEntry } from '../types';
+import { QuestionSet, StudentProgress, AIResponse, StudentProfile, ProgrammingLanguage, Question, FeedbackEntry, Directive } from '../types';
 import { evaluateCodeStream } from '../services/geminiService';
 import { storageService } from '../services/storageService';
 import { ICONS } from '../constants';
@@ -28,6 +28,8 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   const [rightPanelTab, setRightPanelTab] = useState<'diagnostic' | 'history'>('diagnostic');
   
   const [showTrophyRoom, setShowTrophyRoom] = useState(false);
+  const [showComms, setShowComms] = useState(false);
+  const [directives, setDirectives] = useState<Directive[]>([]);
   const [passcode, setPasscode] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockedMsg, setUnlockedMsg] = useState<string | null>(null);
@@ -56,6 +58,14 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   };
 
   useEffect(() => { refreshProfile(); }, [globalProfile.uid]);
+
+  // Subscribe to Directives
+  useEffect(() => {
+    const unsubscribe = storageService.subscribeToDirectives(globalProfile.uid, (newDirectives) => {
+      setDirectives(newDirectives);
+    });
+    return () => unsubscribe();
+  }, [globalProfile.uid]);
 
   // Handle auto-saving of code drafts
   useEffect(() => {
@@ -257,12 +267,85 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
     ).length;
   };
 
+  const unreadCount = directives.filter(d => !d.isRead).length;
+
   if (view === 'hub') {
     const overdriveActive = globalProfile.overdriveQuestionsLeft > 0;
     
     return (
       <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden text-slate-900 dark:text-slate-100">
         {showTrophyRoom && <TrophyRoom profile={globalProfile} onClose={() => setShowTrophyRoom(false)} />}
+        
+        {/* Comms Overlay */}
+        {showComms && (
+          <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="p-8 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-slate-950/30">
+                <div className="flex items-center gap-4">
+                  <div className="bg-indigo-600 text-white p-3 rounded-2xl">
+                    <ICONS.Globe className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Guild Directives</h3>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Incoming Transmissions</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowComms(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all">
+                  <ICONS.Plus className="w-6 h-6 rotate-45 text-slate-400" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 dark-scrollbar">
+                {directives.length === 0 ? (
+                  <div className="py-20 text-center opacity-20 italic text-[10px] font-black uppercase tracking-widest">No Transmissions Recorded</div>
+                ) : (
+                  directives.map(d => (
+                    <div 
+                      key={d.id} 
+                      className={`p-6 rounded-3xl border transition-all ${d.isRead ? 'bg-slate-50 dark:bg-slate-950/50 border-slate-100 dark:border-white/5' : 'bg-indigo-50 dark:bg-indigo-600/10 border-indigo-200 dark:border-indigo-500/30 shadow-lg shadow-indigo-500/5'}`}
+                      onMouseEnter={() => !d.isRead && storageService.markDirectiveAsRead(d.id)}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-[10px]">
+                            {d.teacherName.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-tight">{d.teacherName}</p>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{new Date(d.timestamp).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        {!d.isRead && <span className="bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase animate-pulse">New</span>}
+                      </div>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic">"{d.message}"</p>
+                      
+                      {d.questionSetId && (
+                        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex justify-end">
+                          <button 
+                            onClick={() => {
+                              const set = unlockedSets.find(s => s.id === d.questionSetId);
+                              if (set) {
+                                handleSelectSet(set);
+                                if (d.questionId) {
+                                  const q = set.questions.find(qu => qu.id === d.questionId);
+                                  if (q) handleSelectQuestion(q);
+                                }
+                                setShowComms(false);
+                              }
+                            }}
+                            className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline"
+                          >
+                            Jump to Node →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Gamification Notifications */}
         {showQuestComplete && (
@@ -300,7 +383,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Mastery</p>
               <div className="flex items-center gap-3">
                 {globalProfile.streak >= 3 && (
-                  <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-500/20 px-2 py-1 rounded-lg border border-orange-200 dark:border-orange-500/30 animate-pulse">
+                  <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-500/20 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-500/30 animate-pulse">
                     <ICONS.Flame className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 fill-current" />
                     <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{globalProfile.streak}</span>
                   </div>
@@ -309,6 +392,18 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
                 <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded font-black uppercase">XP</span>
               </div>
             </div>
+            
+            <button 
+              onClick={() => setShowComms(true)} 
+              className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all group shadow-sm dark:shadow-xl relative"
+              title="Guild Comms"
+            >
+              <ICONS.Globe className={`w-6 h-6 ${unreadCount > 0 ? 'text-indigo-600 dark:text-indigo-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'} group-hover:scale-110 transition-transform`} />
+              {unreadCount > 0 && (
+                <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 border-2 border-white dark:border-slate-800 rounded-full"></span>
+              )}
+            </button>
+
             <button onClick={() => setShowTrophyRoom(true)} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all group shadow-sm dark:shadow-xl" title="Trophy Room"><ICONS.Trophy className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform" /></button>
           </div>
         </div>
@@ -428,7 +523,22 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
       )}
 
       <div className="w-full md:w-80 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col flex-none">
-        <div className="p-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 flex justify-between items-center"><div><button onClick={() => setView('hub')} className="text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-2">← Exit Core</button><h2 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate w-48">{activeSet.title}</h2></div></div>
+        <div className="p-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 flex justify-between items-center">
+          <div>
+            <button onClick={() => setView('hub')} className="text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-2">← Exit Core</button>
+            <h2 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate w-48">{activeSet.title}</h2>
+          </div>
+          <button 
+            onClick={() => setShowComms(true)} 
+            className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all group relative"
+            title="Guild Comms"
+          >
+            <ICONS.Globe className={`w-5 h-5 ${unreadCount > 0 ? 'text-indigo-600 dark:text-indigo-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'} group-hover:scale-110 transition-transform`} />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-slate-800 rounded-full"></span>
+            )}
+          </button>
+        </div>
         <div className="px-6 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/20">
           <div className="mb-6 pb-6 border-b border-slate-200 dark:border-white/5">
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-1">Total Academy XP</p>

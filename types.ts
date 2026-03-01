@@ -85,6 +85,21 @@ export interface FeedbackEntry {
   feedback: string;
 }
 
+export type DirectiveType = 'hint' | 'note' | 'directive';
+
+export interface Directive {
+  id: string;
+  studentUid: string;
+  teacherId: string;
+  teacherName: string;
+  message: string;
+  questionSetId?: string;
+  questionId?: string;
+  timestamp: number;
+  isRead: boolean;
+  type: DirectiveType;
+}
+
 export interface StudentProgress {
   id: string;
   studentUid: string;

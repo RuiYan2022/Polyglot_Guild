@@ -5,6 +5,7 @@ import { storageService } from '../services/storageService';
 import { ICONS } from '../constants';
 import MissionLab from './MissionLab';
 import Library from './Library';
+import ExplorerDossier from './ExplorerDossier';
 
 interface TeacherDashboardProps {
   profile: TeacherProfile;
@@ -25,6 +26,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
   
   const [showLab, setShowLab] = useState(false);
   const [activeSetForEdit, setActiveSetForEdit] = useState<QuestionSet | undefined>(undefined);
+  const [selectedExplorer, setSelectedExplorer] = useState<StudentProfile | null>(null);
   
   const [newClassName, setNewClassName] = useState('');
   const [isCreatingClass, setIsCreatingClass] = useState(false);
@@ -467,14 +469,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {filteredAndSortedStudents.map(student => (
-                      <tr key={student.uid} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <tr 
+                        key={student.uid} 
+                        className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group/row"
+                        onClick={() => setSelectedExplorer(student)}
+                      >
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-[10px]">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-[10px] group-hover/row:bg-indigo-600 group-hover/row:text-white transition-all">
                               {student.name.substring(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col">
-                              <span className="font-black text-slate-900 dark:text-white text-xs uppercase">{student.name}</span>
+                              <span className="font-black text-slate-900 dark:text-white text-xs uppercase group-hover/row:text-indigo-600 dark:group-hover/row:text-indigo-400 transition-colors">{student.name}</span>
                               {student.overdriveQuestionsLeft > 0 && (
                                 <span className="text-[8px] font-black text-indigo-500 uppercase flex items-center gap-1">
                                   <ICONS.Zap className="w-2.5 h-2.5 fill-current" /> Overdrive Active
@@ -590,6 +596,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
           )}
         </div>
       </div>
+
+      {selectedExplorer && (
+        <ExplorerDossier 
+          student={selectedExplorer}
+          teacher={profile}
+          allProgress={progress}
+          allMissions={missions}
+          onClose={() => setSelectedExplorer(null)}
+        />
+      )}
     </div>
   );
 };

@@ -296,7 +296,19 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
         <div className="bg-white dark:bg-slate-900/50 border-b border-slate-200 dark:border-white/5 p-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div><h1 className="text-3xl font-black tracking-tight uppercase">Mission Hub</h1><p className="text-indigo-600 dark:text-indigo-400 font-black uppercase text-[10px] tracking-widest mt-1">EXPLORER: {globalProfile.name}</p></div>
           <div className="flex items-center gap-4">
-            <div className="text-right mr-4"><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Mastery</p><div className="flex items-center gap-3"><span className={`text-2xl font-black ${overdriveActive ? 'text-amber-500 animate-pulse' : 'text-slate-900 dark:text-white'}`}>{globalProfile.globalXp.toLocaleString()}</span><span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded font-black uppercase">XP</span></div></div>
+            <div className="text-right mr-4">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Mastery</p>
+              <div className="flex items-center gap-3">
+                {globalProfile.streak >= 3 && (
+                  <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-500/20 px-2 py-1 rounded-lg border border-orange-200 dark:border-orange-500/30 animate-pulse">
+                    <ICONS.Flame className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 fill-current" />
+                    <span className="text-[10px] font-black text-orange-600 dark:text-orange-400">{globalProfile.streak}</span>
+                  </div>
+                )}
+                <span className={`text-2xl font-black ${overdriveActive ? 'text-amber-500 animate-pulse' : 'text-slate-900 dark:text-white'}`}>{globalProfile.globalXp.toLocaleString()}</span>
+                <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded font-black uppercase">XP</span>
+              </div>
+            </div>
             <button onClick={() => setShowTrophyRoom(true)} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 transition-all group shadow-sm dark:shadow-xl" title="Trophy Room"><ICONS.Trophy className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform" /></button>
           </div>
         </div>

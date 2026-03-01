@@ -305,35 +305,76 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ profile }) => {
                   ))}
                </div>
 
-               <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                  <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm dark:shadow-xl">
-                    <div className="px-8 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 flex justify-between items-center">
-                      <h3 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-widest">Node Saturation Map</h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-950/50">
-                          <tr>
-                            <th className="px-8 py-4 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Node Package</th>
-                            <th className="px-8 py-4 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Proficiency</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                          {packStats.map(set => (
-                            <tr key={set.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                              <td className="px-8 py-5 font-black text-slate-700 dark:text-slate-300 text-xs uppercase">{set.title}</td>
-                              <td className="px-8 py-5">
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-32 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                       <div className={`h-full ${set.completionRate < 30 ? 'bg-red-500' : 'bg-indigo-500'}`} style={{ width: `${set.completionRate}%` }}></div>
-                                    </div>
-                                    <span className="text-xs font-black text-slate-900 dark:text-white">{set.completionRate}%</span>
-                                 </div>
-                              </td>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                  <div className="lg:col-span-2 space-y-12">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm dark:shadow-xl">
+                      <div className="px-8 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/30 flex justify-between items-center">
+                        <h3 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-widest">Node Saturation Map</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-950/50">
+                            <tr>
+                              <th className="px-8 py-4 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Node Package</th>
+                              <th className="px-8 py-4 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Proficiency</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {packStats.map(set => (
+                              <tr key={set.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                <td className="px-8 py-5 font-black text-slate-700 dark:text-slate-300 text-xs uppercase">{set.title}</td>
+                                <td className="px-8 py-5">
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-32 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                         <div className={`h-full ${set.completionRate < 30 ? 'bg-red-500' : 'bg-indigo-500'}`} style={{ width: `${set.completionRate}%` }}></div>
+                                      </div>
+                                      <span className="text-xs font-black text-slate-900 dark:text-white">{set.completionRate}%</span>
+                                   </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* On Fire & Overdrive Highlights */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-orange-200 dark:border-orange-500/20 shadow-sm dark:shadow-xl">
+                          <h3 className="font-black text-orange-600 dark:text-orange-400 text-[9px] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                             <ICONS.Flame className="w-4 h-4 fill-current" /> On Fire Explorers
+                          </h3>
+                          <div className="space-y-4">
+                             {approvedStudents.filter(s => (s.streak || 0) >= 3).length === 0 ? (
+                               <p className="text-[10px] text-slate-400 dark:text-slate-600 font-black uppercase italic">No active streaks detected.</p>
+                             ) : (
+                               approvedStudents.filter(s => (s.streak || 0) >= 3).sort((a,b) => (b.streak || 0) - (a.streak || 0)).slice(0, 5).map(s => (
+                                 <div key={s.uid} className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{s.name}</span>
+                                    <span className="bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-3 py-1 rounded-lg font-black text-[10px] border border-orange-200 dark:border-orange-500/30">{s.streak} Days</span>
+                                 </div>
+                               ))
+                             )}
+                          </div>
+                       </div>
+
+                       <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-indigo-200 dark:border-indigo-500/20 shadow-sm dark:shadow-xl">
+                          <h3 className="font-black text-indigo-600 dark:text-indigo-400 text-[9px] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                             <ICONS.Zap className="w-4 h-4 fill-current" /> Overdrive Active
+                          </h3>
+                          <div className="space-y-4">
+                             {approvedStudents.filter(s => (s.overdriveQuestionsLeft || 0) > 0).length === 0 ? (
+                               <p className="text-[10px] text-slate-400 dark:text-slate-600 font-black uppercase italic">No overdrive sessions active.</p>
+                             ) : (
+                               approvedStudents.filter(s => (s.overdriveQuestionsLeft || 0) > 0).slice(0, 5).map(s => (
+                                 <div key={s.uid} className="flex justify-between items-center">
+                                    <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{s.name}</span>
+                                    <span className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-lg font-black text-[10px] border border-indigo-200 dark:border-indigo-500/30">{s.overdriveQuestionsLeft} Nodes Left</span>
+                                 </div>
+                               ))
+                             )}
+                          </div>
+                       </div>
                     </div>
                   </div>
 

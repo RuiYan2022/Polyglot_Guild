@@ -430,6 +430,16 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
       <div className="w-full md:w-80 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col flex-none">
         <div className="p-6 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 flex justify-between items-center"><div><button onClick={() => setView('hub')} className="text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 mb-2">← Exit Core</button><h2 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest truncate w-48">{activeSet.title}</h2></div></div>
         <div className="px-6 py-6 border-b border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/20">
+          <div className="mb-6 pb-6 border-b border-slate-200 dark:border-white/5">
+            <p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-1">Total Academy XP</p>
+            <div className="flex items-center gap-2">
+              <span className={`text-xl font-black ${overdriveActive ? 'text-amber-500 animate-pulse' : 'text-slate-900 dark:text-white'}`}>
+                {globalProfile.globalXp.toLocaleString()}
+              </span>
+              <span className="text-[8px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-black uppercase">XP</span>
+            </div>
+          </div>
+
           <div className="flex justify-between items-end mb-2">
             <p className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Protocol Progress</p>
             <p className="text-[10px] font-black text-slate-900 dark:text-white">{setCompletionPercentage}%</p>

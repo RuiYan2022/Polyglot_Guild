@@ -37,6 +37,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [showQuestComplete, setShowQuestComplete] = useState(false);
   const [showOverdriveActivated, setShowOverdriveActivated] = useState(false);
+  const [diagnosticLog, setDiagnosticLog] = useState('');
 
   const saveTimeoutRef = useRef<any>(null);
   const difficulties: ('Easy' | 'Medium' | 'Hard' | 'Challenging')[] = ['Easy', 'Medium', 'Hard', 'Challenging'];
@@ -152,12 +153,29 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
     setLastResult(null);
     setStreamingFeedback('');
     setRightPanelTab('diagnostic');
+    setDiagnosticLog('INITIALIZING UPLINK...');
+
+    const logs = [
+      'SCANNING SYNTAX...',
+      'VERIFYING LOGIC...',
+      'COMPARING TO MASTER...',
+      'ANALYZING EFFICIENCY...',
+      'DECRYPTING FEEDBACK...'
+    ];
+    let logIdx = 0;
+    const logInterval = setInterval(() => {
+      if (logIdx < logs.length) {
+        setDiagnosticLog(logs[logIdx]);
+        logIdx++;
+      }
+    }, 400);
     
     let accumulatedText = '';
     try {
       const responseStream = await evaluateCodeStream(activeSet.language, currentMission.description, currentCode);
       
       for await (const chunk of responseStream) {
+        clearInterval(logInterval);
         const text = chunk.text;
         accumulatedText += text;
         const visibleText = accumulatedText.split('[DATA]')[0];
@@ -668,7 +686,7 @@ const StudentPortal: React.FC<StudentPortalProps> = ({ profile, onLogout }) => {
                       <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em]">Neural Stream</span>
                     </div>
                     <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium whitespace-pre-wrap italic selection:bg-indigo-500/20">
-                      {streamingFeedback || "Waiting for packet arrival..."}
+                      {streamingFeedback || diagnosticLog || "Waiting for packet arrival..."}
                     </div>
                   </div>
                 ) : !lastResult ? (

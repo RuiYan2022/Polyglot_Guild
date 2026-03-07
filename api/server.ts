@@ -1,5 +1,5 @@
 import express from "express";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 const app = express();
 app.use(express.json());
@@ -62,11 +62,10 @@ app.post("/api/evaluate-code", async (req, res) => {
                  \`\`\`
                  
                  INSTRUCTION:
-                 1. If the code is CORRECT and solves the problem optimally:
-                    - Be extremely brief. Just confirm it's correct (e.g., "Logic verified. Great job!").
-                 2. If the code is INCORRECT or has logic errors:
-                    - Provide detailed conversational feedback and 2-3 specific suggestions for improvement.
-                 3. At the very end of your response, include the diagnostic result in JSON format between [DATA] and [/DATA] tags.
+                 1. Be extremely concise. 
+                 2. If CORRECT: Just confirm (e.g., "Logic verified. Excellent.").
+                 3. If INCORRECT: Provide 1-2 brief tactical suggestions.
+                 4. End with the diagnostic JSON between [DATA] and [/DATA] tags.
                  
                  JSON SCHEMA:
                  {
@@ -75,6 +74,9 @@ app.post("/api/evaluate-code", async (req, res) => {
                    "feedback": string,
                    "suggestions": string[]
                  }`,
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      }
     });
 
     for await (const chunk of streamResponse) {
